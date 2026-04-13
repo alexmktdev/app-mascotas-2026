@@ -112,8 +112,7 @@ async function syncPetStatusesByRequests(): Promise<void> {
 // ──────────────────────────────────────────────
 
 export async function fetchPublicPets(
-  filters: PetFilters,
-  signal?: AbortSignal,
+  filters: PetFilters
 ): Promise<PaginatedResponse<PetCardData>> {
   const page = filters.page ?? 1
   const from = (page - 1) * PET_PAGE_SIZE

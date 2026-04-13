@@ -64,7 +64,7 @@ export async function primeSignedUrlsCache(storagePaths: string[]): Promise<void
 
   // Guardar en caché local
   for (const item of data) {
-    if (item.error || !item.signedUrl) continue
+    if (item.error || !item.signedUrl || !item.path) continue
     // createSignedUrls a veces devuelve el path tal cual se pidió
     signedUrlCache.set(item.path, { url: item.signedUrl, exp: now + 50 * 60 * 1000 })
   }

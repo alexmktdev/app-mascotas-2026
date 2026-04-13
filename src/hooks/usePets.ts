@@ -8,6 +8,7 @@ import {
   fetchPetDetail,
   fetchAdminPets,
   fetchAllPetStats,
+  createPet,
   updatePet,
   deletePet,
 } from '@/api/pets'

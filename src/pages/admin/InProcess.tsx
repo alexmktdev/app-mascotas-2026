@@ -27,7 +27,6 @@ export default function InProcess() {
   } | null>(null)
 
   const [notesDialog, setNotesDialog] = useState<AdoptionRequestAdminRow | null>(null)
-  const [notesInput, setNotesInput] = useState('')
   const [detailRequest, setDetailRequest] = useState<AdoptionRequestAdminRow | null>(null)
 
   const handleAction = async () => {
@@ -132,7 +131,7 @@ export default function InProcess() {
           ) : null}
           <button
             type="button"
-            onClick={() => { setNotesDialog(r); setNotesInput(r.admin_notes ?? '') }}
+            onClick={() => setNotesDialog(r)}
             className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-b from-amber-400 to-amber-500 px-2.5 py-2 text-[11px] font-bold text-amber-950 shadow-md shadow-amber-600/25 transition hover:from-amber-500 hover:to-amber-600 sm:px-3"
             title="Notas de administrador"
           >
