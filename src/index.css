@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────
+   Custom Theme — Municipalidad de Molina colors
+   ────────────────────────────────────────────── */
+
+@theme {
+  /* Tipografía */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* Colores corporativos Municipalidad de Molina */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #dce4ff;
+  --color-primary-200: #b9c9ff;
+  --color-primary-300: #8ba6ff;
+  --color-primary-400: #5a7eff;
+  --color-primary-500: #3347b5;
+  --color-primary-600: #2c3ea8;
+  --color-primary-700: #1e3278;
+  --color-primary-800: #152560;
+  --color-primary-900: #0e1a45;
+
+  --color-accent-400: #4ade80;
+  --color-accent-500: #22c55e;
+  --color-accent-600: #16a34a;
+
+  --color-surface-50: #f8f9fc;
+  --color-surface-100: #f0f2f7;
+  --color-surface-200: #e2e5ee;
+  --color-surface-700: #404968;
+  --color-surface-800: #2a3150;
+  --color-surface-850: #1f2540;
+  --color-surface-900: #151a30;
+  --color-surface-950: #0c0f1e;
+
+  /* Animaciones */
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.4s ease-out;
+  --animate-slide-down: slide-down 0.3s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-shimmer: shimmer 2s infinite linear;
+  --animate-bounce-slow: bounce-slow 4s infinite ease-in-out;
+}
+
+/* ──────────────────────────────────────────────
+   Keyframes
+   ────────────────────────────────────────────── */
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ──────────────────────────────────────────────
+   Base styles
+   ────────────────────────────────────────────── */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2c3ea8 transparent;
+}
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ──────────────────────────────────────────────
+   Utility classes
+   ────────────────────────────────────────────── */
+
+.glass {
+  background: rgba(248, 249, 252, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 229, 238, 0.5);
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #e2e5ee 25%,
+    #f0f2f7 50%,
+    #e2e5ee 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+  border-radius: 8px;
+}
+
+/* Gradiente corporativo Molina */
+.gradient-molina {
+  background: linear-gradient(135deg, #1e3278 0%, #2c3ea8 50%, #3347b5 100%);
+}
+
+.gradient-molina-horizontal {
+  background: linear-gradient(90deg, #1e3278 0%, #2c3ea8 40%, #3b5fc7 100%);
+}

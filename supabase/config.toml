@@ -1,0 +1,13 @@
+# Configuración de Edge Functions (Supabase CLI).
+# La verificación JWT en el *gateway* es incompatible con JWT Signing Keys asimétricas;
+# la función create-user valida el token dentro del código con getClaims().
+# https://supabase.com/docs/guides/functions/function-configuration
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.update-user]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false

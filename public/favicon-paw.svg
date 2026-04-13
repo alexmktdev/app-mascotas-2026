@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Huella de perro">
+  <rect width="64" height="64" rx="14" fill="#1f3a8a" />
+  <g fill="#ffffff">
+    <ellipse cx="18" cy="20" rx="6" ry="8" transform="rotate(-18 18 20)" />
+    <ellipse cx="30" cy="15" rx="6" ry="8" transform="rotate(-6 30 15)" />
+    <ellipse cx="44" cy="15" rx="6" ry="8" transform="rotate(6 44 15)" />
+    <ellipse cx="54" cy="20" rx="6" ry="8" transform="rotate(18 54 20)" />
+    <path d="M32 28c-10 0-17 8-17 16 0 6 5 10 11 10 4 0 6-2 8-4 2 2 4 4 8 4 6 0 11-4 11-10 0-8-7-16-21-16z" />
+  </g>
+</svg>
