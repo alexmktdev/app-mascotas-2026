@@ -64,7 +64,7 @@ function AdminSidebarInner() {
       end={end}
       onClick={() => setIsMobileOpen(false)}
       className={({ isActive }) => `
-        group flex items-center gap-3 rounded-xl px-2.5 py-1.5 transition-all duration-300
+        group flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-300
         ${isActive 
           ? 'active gradient-molina text-white shadow-md shadow-primary-600/20' 
           : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'}
