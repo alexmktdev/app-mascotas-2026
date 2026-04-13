@@ -80,6 +80,10 @@
    Base styles
    ────────────────────────────────────────────── */
 
+html {
+  font-size: 80%;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: #2c3ea8 transparent;
