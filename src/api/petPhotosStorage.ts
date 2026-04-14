@@ -81,16 +81,26 @@ export async function uploadPetPhoto(userId: string, file: File): Promise<string
     throw new Error('Formato no permitido (JPEG, PNG, WebP o GIF)')
   }
 
-  const optimizedFile = await optimizeImage(file)
-  const buffer = await optimizedFile.arrayBuffer()
+  // Listado y detalle no necesitan más de ~960px; menos píxeles = canvas y subida más rápidos.
+  // Sin tope, un JPEG enorme en un dispositivo lento puede dejar el formulario en "cargando" indefinidamente.
+  const OPTIMIZE_MS = 45_000
+  const optimizedFile = await withTimeout(
+    optimizeImage(file, {
+      maxWidth: 960,
+      maxHeight: 960,
+      quality: 0.78,
+    }),
+    OPTIMIZE_MS,
+    'Tiempo de espera al preparar la imagen (compresión). Prueba con otra foto o desde otro dispositivo.',
+  )
   const ext = 'webp' // Forzado a webp por optimización
   const path = `${userId}/${crypto.randomUUID()}.${ext}`
 
-  const UPLOAD_MS = 25_000
+  const UPLOAD_MS = 70_000
 
   await withTimeout(
     (async () => {
-      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, buffer, {
+      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, optimizedFile, {
         contentType: 'image/webp',
         upsert: false,
         cacheControl: '31536000', // 1 año de caché para optimizar egress
@@ -98,7 +108,7 @@ export async function uploadPetPhoto(userId: string, file: File): Promise<string
       if (error) throw error
     })(),
     UPLOAD_MS,
-    'Tiempo de espera al subir la foto. Revisa tu conexión o prueba con una imagen más liviana.',
+    'Tiempo de espera al subir la foto. Si tu conexión es lenta, espera un poco o prueba desde otra red; si el archivo es muy grande, prueba con otra imagen.',
   )
 
   const { data } = supabase.storage.from(PET_PHOTOS_BUCKET).getPublicUrl(path)

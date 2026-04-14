@@ -46,13 +46,13 @@ describe('Button', () => {
   it('aplica tamaño sm', () => {
     render(<Button size="sm">Small</Button>)
     const btn = screen.getByRole('button')
-    expect(btn.className).toContain('px-3')
+    expect(btn.className).toContain('px-4')
   })
 
   it('aplica tamaño lg', () => {
     render(<Button size="lg">Large</Button>)
     const btn = screen.getByRole('button')
-    expect(btn.className).toContain('px-6')
+    expect(btn.className).toContain('px-8')
   })
 
   it('está disabled cuando disabled={true}', () => {

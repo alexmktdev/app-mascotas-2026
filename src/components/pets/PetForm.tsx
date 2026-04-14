@@ -79,15 +79,13 @@ interface PetFormProps {
   /** Usuario autenticado (necesario para subir archivos al bucket). */
   userId: string | null | undefined
   onSubmit: (data: PetFormData) => void | Promise<void>
-  isLoading?: boolean
 }
 
 const allowedMime = new Set<string>(PET_PHOTO_MIME_TYPES)
 
-export function PetForm({ mode, defaultValues, userId, onSubmit, isLoading }: PetFormProps) {
+export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps) {
   const [photoEntries, setPhotoEntries] = useState<PhotoEntry[]>([])
   const [submitting, setSubmitting] = useState(false)
-  const [unlockLoadingUI, setUnlockLoadingUI] = useState(false)
   const [submitStage, setSubmitStage] = useState<'idle' | 'refresh' | 'upload' | 'save'>('idle')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -178,13 +176,11 @@ export function PetForm({ mode, defaultValues, userId, onSubmit, isLoading }: Pe
       }
 
     setSubmitting(true)
-    setUnlockLoadingUI(false)
     setSubmitStage('refresh')
-    /** Por si alguna promesa no termina nunca: evita botón/registro colgados sin F5. */
+    /** Por si alguna promesa no termina nunca: evita botón colgado sin F5 (p. ej. pestaña en segundo plano). */
     const safetyMs = 150_000
     const safetyId = window.setTimeout(() => {
       setSubmitting(false)
-      setUnlockLoadingUI(true)
       setSubmitStage('idle')
       toast.error(
         'La operación está tardando demasiado. Se desbloqueó el formulario para que puedas reintentar.',
@@ -221,7 +217,8 @@ export function PetForm({ mode, defaultValues, userId, onSubmit, isLoading }: Pe
     toast.error('Revisa los campos marcados en rojo antes de continuar.')
   })
 
-  const buttonLoading = submitting || Boolean(isLoading && !unlockLoadingUI)
+  /** Solo `submitting`: incluye subida de fotos + `await onSubmit` (mutación). `isPending` del padre era redundante y podía desincronizarse. */
+  const buttonLoading = submitting
 
   const inputClasses = 'w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-sm shadow-sm transition-all placeholder:text-surface-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20'
   const labelClasses = 'mb-1 block text-sm font-medium text-surface-700'
@@ -235,6 +232,7 @@ export function PetForm({ mode, defaultValues, userId, onSubmit, isLoading }: Pe
         type="file"
         accept={PET_PHOTO_ACCEPT_ATTR}
         className="hidden"
+        aria-label="Seleccionar imagen para la ficha de la mascota"
         onChange={onFilePick}
       />
 
@@ -457,14 +455,17 @@ export function PetForm({ mode, defaultValues, userId, onSubmit, isLoading }: Pe
 
       {/* Submit */}
       <div className="flex justify-end gap-3">
-        <Button type="submit" isLoading={buttonLoading} size="lg" onClick={() => setHasAttemptedSubmit(true)}>
+        <Button type="submit" isLoading={buttonLoading} size="lg" onClick={() => setHasAttemptedSubmit(true)} aria-busy={buttonLoading}>
           {mode === 'create' ? '🐾 Registrar mascota' : '💾 Guardar cambios'}
         </Button>
       </div>
       {submitting && (
         <p className="text-right text-xs font-medium text-surface-500 animate-pulse">
-          {submitStage === 'upload' && '📷 Subiendo fotos nuevas...'}
-          {submitStage === 'save' && '💾 Guardando ficha en el servidor...'}
+          {submitStage === 'save'
+            ? '💾 Guardando ficha en el servidor...'
+            : submitStage === 'upload'
+              ? '📷 Subiendo o preparando fotos...'
+              : '⏳ Enviando…'}
         </p>
       )}
     </form>

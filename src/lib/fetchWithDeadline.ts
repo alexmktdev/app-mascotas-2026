@@ -4,8 +4,8 @@
  * carga infinita y las mutaciones (p. ej. eliminar) quedan en pending hasta F5.
  */
 
-/** Subida de fotos + PostgREST en redes lentas; demasiado bajo cortaba operaciones válidas. */
-export const SUPABASE_REQUEST_TIMEOUT_MS = 60_000
+/** Subida de fotos + PostgREST; algo mayor que el withTimeout de Storage para no cortar el fetch antes. */
+export const SUPABASE_REQUEST_TIMEOUT_MS = 90_000
 
 export function createFetchWithDeadline(timeoutMs: number): typeof fetch {
   return function fetchWithDeadline(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {

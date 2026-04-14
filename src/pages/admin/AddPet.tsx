@@ -61,7 +61,7 @@ export default function AddPet() {
         <p className="text-sm text-surface-500">Registra una nueva mascota en el sistema</p>
       </div>
 
-      <PetForm mode="create" userId={user?.id} onSubmit={handleSubmit} isLoading={createPet.isPending} />
+      <PetForm mode="create" userId={user?.id} onSubmit={handleSubmit} />
     </div>
   )
 }

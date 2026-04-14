@@ -84,13 +84,7 @@ export default function EditPet() {
         <p className="text-sm text-surface-500">Modifica los datos de la mascota</p>
       </div>
 
-      <PetForm
-        mode="edit"
-        defaultValues={pet}
-        userId={user?.id}
-        onSubmit={handleSubmit}
-        isLoading={updatePet.isPending}
-      />
+      <PetForm mode="edit" defaultValues={pet} userId={user?.id} onSubmit={handleSubmit} />
     </div>
   )
 }
