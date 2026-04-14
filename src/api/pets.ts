@@ -103,11 +103,6 @@ const PUBLIC_CARD_FIELDS = 'id, name, species, breed, age_months, gender, size, 
 const ADMIN_LIST_FIELDS = 'id, name, species, breed, age_months, status, intake_date, photo_urls' as const
 const DETAIL_FIELDS = '*' as const  // Detalle necesita todos los campos
 
-async function syncPetStatusesByRequests(): Promise<void> {
-  const { error } = await supabase.rpc('sync_pet_statuses_by_requests' as never)
-  if (error) throw error
-}
-
 // ──────────────────────────────────────────────
 // Público: mascotas disponibles (con filtros y paginación)
 // ──────────────────────────────────────────────
@@ -231,8 +226,6 @@ export async function fetchPetDetail(id: string): Promise<Pet> {
 // ──────────────────────────────────────────────
 
 export async function fetchAdminPets(filters: AdminPetFilters): Promise<PaginatedResponse<Pet>> {
-  await syncPetStatusesByRequests()
-
   const page = filters.page ?? 1
   const from = (page - 1) * ADMIN_PAGE_SIZE
   const to = from + ADMIN_PAGE_SIZE - 1
@@ -347,10 +340,7 @@ export async function deletePet(id: string): Promise<void> {
 // ──────────────────────────────────────────────
 
 export async function fetchAllPetStats(): Promise<{ available: number, inProcess: number, adopted: number }> {
-  // Solo sincronizamos UNA vez para todos los contadores
-  await syncPetStatusesByRequests()
-
-  // Ejecutamos las 3 cuentas en paralelo (sin disparar la limpieza de la BD 3 veces)
+  // Ejecutamos las 3 cuentas en paralelo
   const [available, inProcess, adopted] = await Promise.all([
     supabase.from('pets').select('*', { count: 'exact', head: true }).eq('status', 'available'),
     supabase.from('pets').select('*', { count: 'exact', head: true }).eq('status', 'in_process'),

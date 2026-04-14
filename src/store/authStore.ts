@@ -9,6 +9,9 @@ import type { Profile } from '@/types'
 import type { Session, User } from '@supabase/supabase-js'
 import { logger } from '@/utils'
 
+let initPromise: Promise<void> | null = null
+let authUnsubscribe: (() => void) | null = null
+
 interface AuthState {
   session: Session | null
   user: User | null
@@ -31,6 +34,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
 
   initialize: async () => {
+    if (initPromise) {
+      await initPromise
+      return
+    }
+
+    initPromise = (async () => {
     try {
       // Restaurar sesión existente
       const { data: { session } } = await supabase.auth.getSession()
@@ -40,28 +49,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await get().fetchProfile(session.user.id)
       }
 
-      // Suscribirse a cambios de auth
-      supabase.auth.onAuthStateChange(async (event, newSession) => {
-        logger.log('Auth event:', event)
+      // Suscribirse a cambios de auth una sola vez (evita listeners duplicados en StrictMode)
+      if (!authUnsubscribe) {
+        const { data } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+          logger.log('Auth event:', event)
 
-        if (event === 'SIGNED_IN' && newSession?.user) {
-          set({ session: newSession, user: newSession.user })
-          await get().fetchProfile(newSession.user.id)
-        }
+          if (event === 'SIGNED_IN' && newSession?.user) {
+            set({ session: newSession, user: newSession.user })
+            await get().fetchProfile(newSession.user.id)
+          }
 
-        if (event === 'SIGNED_OUT') {
-          set({ session: null, user: null, profile: null })
-        }
+          if (event === 'SIGNED_OUT') {
+            set({ session: null, user: null, profile: null })
+          }
 
-        if (event === 'TOKEN_REFRESHED' && newSession) {
-          set({ session: newSession })
-        }
-      })
+          if (event === 'TOKEN_REFRESHED' && newSession) {
+            set({ session: newSession })
+          }
+        })
+        authUnsubscribe = () => data.subscription.unsubscribe()
+      }
     } catch (error) {
       logger.error('Error inicializando auth:', error)
     } finally {
       set({ isLoading: false, isInitialized: true })
+      initPromise = null
     }
+    })()
+
+    await initPromise
   },
 
   login: async (email: string, password: string) => {

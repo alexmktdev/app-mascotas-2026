@@ -45,11 +45,6 @@ const ADMIN_LIST_SELECT = [
 
 const DETAIL_FIELDS = '*' as const
 
-async function syncPetStatusesByRequests(): Promise<void> {
-  const { error } = await supabase.rpc('sync_pet_statuses_by_requests' as never)
-  if (error) throw error
-}
-
 function mapAdoptionAdminRow(raw: Record<string, unknown>): AdoptionRequestAdminRow {
   const pets = raw.pets as { name?: string } | null | undefined
   const { pets: _p, ...rest } = raw
@@ -96,8 +91,6 @@ export async function fetchAdoptionRequests(params: {
   status?: AdoptionRequest['status']
   page?: number
 }): Promise<PaginatedResponse<AdoptionRequestAdminRow>> {
-  await syncPetStatusesByRequests()
-
   const page = params.page ?? 1
   const from = (page - 1) * ADMIN_PAGE_SIZE
   const to = from + ADMIN_PAGE_SIZE - 1
@@ -163,8 +156,6 @@ export async function updateAdoptionRequest(
 export async function fetchRecentAdoptionRequests(
   limit: number = 5
 ): Promise<AdoptionRequestAdminRow[]> {
-  await syncPetStatusesByRequests()
-
   const { data, error } = await supabase
     .from('adoption_requests')
     .select(ADMIN_LIST_SELECT)
