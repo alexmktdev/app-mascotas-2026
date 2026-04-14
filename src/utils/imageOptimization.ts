@@ -19,7 +19,7 @@ interface OptimizeOptions {
 export async function optimizeImage(
   file: File | Blob,
   options: OptimizeOptions = {}
-): Promise<Blob> {
+): Promise<File> {
   const {
     maxWidth = 1200,
     maxHeight = 1200,
@@ -64,7 +64,9 @@ export async function optimizeImage(
       canvas.toBlob(
         (blob) => {
           if (blob) {
-            resolve(blob)
+            const fileName = file instanceof File ? file.name.replace(/\.[^/.]+$/, "") + ".webp" : "optimized.webp"
+            const finalFile = new File([blob], fileName, { type })
+            resolve(finalFile)
           } else {
             reject(new Error('Fallo al crear el Blob de la imagen optimizada'))
           }

@@ -85,7 +85,7 @@ export async function uploadPetPhoto(userId: string, file: File): Promise<string
   const ext = 'webp' // Forzado a webp por optimización
   const path = `${userId}/${crypto.randomUUID()}.${ext}`
 
-  const UPLOAD_MS = 90_000
+  const UPLOAD_MS = 25_000
 
   await withTimeout(
     (async () => {
