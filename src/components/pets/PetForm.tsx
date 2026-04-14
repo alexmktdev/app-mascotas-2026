@@ -19,8 +19,6 @@ import {
 import { PetPhotoImage } from '@/components/pets/PetPhotoImage'
 import { isEphemeralImageRef } from '@/utils'
 import { uploadPetPhoto } from '@/api/petPhotosStorage'
-import { supabase } from '@/lib/supabase'
-import { withTimeout } from '@/lib/withTimeout'
 import { Plus, Trash2, AlertCircle } from 'lucide-react'
 import type { Pet } from '@/types'
 import toast from 'react-hot-toast'
