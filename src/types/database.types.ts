@@ -103,6 +103,7 @@ export interface Database {
           microchip?: boolean
           health_notes?: string | null
           personality?: string | null
+          story?: string | null
           good_with_kids?: boolean | null
           good_with_dogs?: boolean | null
           good_with_cats?: boolean | null

@@ -78,6 +78,7 @@ function petFromInsertResult(id: string, payload: PetInsert): Pet {
     microchip: payload.microchip ?? false,
     health_notes: payload.health_notes ?? null,
     personality: payload.personality ?? null,
+    story: payload.story ?? null,
     good_with_kids: payload.good_with_kids ?? null,
     good_with_dogs: payload.good_with_dogs ?? null,
     good_with_cats: payload.good_with_cats ?? null,
