@@ -169,24 +169,7 @@ export function PetForm({ mode, defaultValues, userId, onSubmit, isLoading }: Pe
     if (file) addNewPhoto(file)
   }
 
-  const ensureActiveSession = useCallback(async () => {
-    const REFRESH_MS = 20_000
-    try {
-      const refreshed = await withTimeout(
-        supabase.auth.refreshSession(),
-        REFRESH_MS,
-        'No se pudo renovar la sesión a tiempo.',
-      )
-      if (!refreshed.error) return
-    } catch {
-      // Si refresh tarda/falla, validamos sesión local antes de bloquear el flujo.
-    }
 
-    const { data: current } = await supabase.auth.getSession()
-    if (!current.session) {
-      throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.')
-    }
-  }, [])
 
   const submit = handleSubmit(
     async (data) => {
@@ -210,10 +193,6 @@ export function PetForm({ mode, defaultValues, userId, onSubmit, isLoading }: Pe
       )
     }, safetyMs)
     try {
-      if (userId) {
-        await ensureActiveSession()
-      }
-
       setSubmitStage('upload')
       const photo_urls: string[] = []
       for (const e of photoEntries) {
@@ -486,7 +465,6 @@ export function PetForm({ mode, defaultValues, userId, onSubmit, isLoading }: Pe
       </div>
       {submitting && (
         <p className="text-right text-xs font-medium text-surface-500 animate-pulse">
-          {submitStage === 'refresh' && '🔒 Asegurando sesión...'}
           {submitStage === 'upload' && '📷 Subiendo fotos nuevas...'}
           {submitStage === 'save' && '💾 Guardando ficha en el servidor...'}
         </p>
