@@ -11,6 +11,7 @@ import {
   PET_PHOTO_MIME_TYPES,
 } from '@/constants'
 import { isEphemeralImageRef } from '@/utils'
+import { optimizeImage } from '@/utils/imageOptimization'
 
 const ALLOWED = new Set<string>(PET_PHOTO_MIME_TYPES)
 
@@ -97,17 +98,18 @@ export async function uploadPetPhoto(userId: string, file: File): Promise<string
     throw new Error('Formato no permitido (JPEG, PNG, WebP o GIF)')
   }
 
-  const ext = extensionFor(file)
+  const optimizedBlob = await optimizeImage(file)
+  const ext = 'webp' // Forzado a webp por optimización
   const path = `${userId}/${crypto.randomUUID()}.${ext}`
 
   const UPLOAD_MS = 90_000
 
   await withTimeout(
     (async () => {
-      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, file, {
-        contentType: file.type,
+      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, optimizedBlob, {
+        contentType: 'image/webp',
         upsert: false,
-        cacheControl: '3600',
+        cacheControl: '31536000', // 1 año de caché para optimizar egress
       })
       if (error) throw error
     })(),
