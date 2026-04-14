@@ -58,6 +58,7 @@ export const petFormSchema = z.object({
   microchip: z.boolean().default(false),
   health_notes: z.string().max(3000, 'Máximo 3000 caracteres').optional().or(z.literal('')),
   personality: z.string().max(2000, 'Máximo 2000 caracteres').optional().or(z.literal('')),
+  story: z.string().max(4000, 'Máximo 4000 caracteres').optional().or(z.literal('')),
   good_with_kids: z.boolean().optional(),
   good_with_dogs: z.boolean().optional(),
   good_with_cats: z.boolean().optional(),

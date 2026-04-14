@@ -64,6 +64,7 @@ function buildDefaultFields(pet?: Partial<Pet>): PetFormFields {
     microchip: pet?.microchip ?? false,
     health_notes: pet?.health_notes ?? '',
     personality: pet?.personality ?? '',
+    story: pet?.story ?? '',
     good_with_kids: pet?.good_with_kids ?? undefined,
     good_with_dogs: pet?.good_with_dogs ?? undefined,
     good_with_cats: pet?.good_with_cats ?? undefined,
@@ -374,6 +375,18 @@ export function PetForm({ mode, defaultValues, userId, onSubmit, isLoading }: Pe
             placeholder="Ej: Juguetón, cariñoso, tranquilo..."
           />
           {errors.personality && <p className={errorClasses}>{errors.personality.message}</p>}
+        </div>
+
+        <div>
+          <label className={labelClasses}>Historia (Cuento o trasfondo)</label>
+          <textarea
+            {...register('story')}
+            rows={4}
+            maxLength={4000}
+            className={inputClasses}
+            placeholder="Érase una vez una perrita que vivía en..."
+          />
+          {errors.story && <p className={errorClasses}>{errors.story.message}</p>}
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

@@ -106,6 +106,7 @@ export type PetCardData = Pick<
   | 'vaccinated'
   | 'photo_urls'
   | 'status'
+  | 'story'
 >
 
 // ──────────────────────────────────────────────

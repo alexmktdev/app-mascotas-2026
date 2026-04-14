@@ -61,6 +61,12 @@ function PetCardInner({ pet, index }: PetCardProps) {
           <Badge variant="info">{GENDER_LABELS[pet.gender]}</Badge>
         </div>
 
+        {pet.story && (
+          <p className="mb-3 line-clamp-2 text-[13px] italic leading-snug text-surface-600">
+            "{pet.story}"
+          </p>
+        )}
+
         <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs text-surface-500">
           <span>📅 {formatAge(pet.age_months)}</span>
           {pet.size && (

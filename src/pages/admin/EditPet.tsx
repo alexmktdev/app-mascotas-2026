@@ -50,6 +50,7 @@ export default function EditPet() {
       good_with_dogs: data.good_with_dogs ?? null,
       good_with_cats: data.good_with_cats ?? null,
       special_needs: data.special_needs?.trim() || null,
+      story: data.story?.trim() || null,
       status: data.status,
       photo_urls: data.photo_urls,
       drive_folder_id: data.drive_folder_id?.trim() || null,

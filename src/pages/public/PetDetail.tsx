@@ -15,7 +15,7 @@ import {
 } from '@/constants'
 import {
   ChevronRight, Heart, Syringe, Scissors, Bug, Cpu,
-  Baby, Dog, Cat, AlertCircle, Calendar, Scale,
+  Baby, Dog, Cat, AlertCircle, Calendar, Scale, BookOpen,
 } from 'lucide-react'
 
 export default function PetDetail() {
@@ -128,6 +128,18 @@ export default function PetDetail() {
               )}
             </div>
           </div>
+
+          {/* Historia */}
+          {pet.story && (
+            <div className="rounded-2xl border border-primary-100 bg-primary-50/30 p-6 shadow-sm">
+              <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-primary-900">
+                <BookOpen className="h-5 w-5" /> Nuestra Historia
+              </h3>
+              <p className="whitespace-pre-wrap text-base italic leading-relaxed text-surface-700">
+                "{pet.story}"
+              </p>
+            </div>
+          )}
 
           {/* Personalidad */}
           {pet.personality && (
