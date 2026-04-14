@@ -28,6 +28,7 @@ const Adopted = React.lazy(() => import('@/pages/admin/Adopted'))
 const UsersList = React.lazy(() => import('@/pages/admin/UsersList'))
 const CreateUser = React.lazy(() => import('@/pages/admin/CreateUser'))
 const EditUser = React.lazy(() => import('@/pages/admin/EditUser'))
+const ResetPassword = React.lazy(() => import('@/pages/public/ResetPassword'))
 const NotFound = React.lazy(() => import('@/pages/public/NotFound'))
 const Unauthorized = React.lazy(() => import('@/pages/public/Unauthorized'))
 
@@ -80,6 +81,10 @@ export const router = createBrowserRouter([
       {
         path: '/unauthorized',
         element: <SuspenseWrapper><Unauthorized /></SuspenseWrapper>,
+      },
+      {
+        path: '/reset-password',
+        element: <SuspenseWrapper><ResetPassword /></SuspenseWrapper>,
       },
       {
         path: '*',
