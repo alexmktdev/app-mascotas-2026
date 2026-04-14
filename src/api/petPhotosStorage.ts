@@ -81,7 +81,8 @@ export async function uploadPetPhoto(userId: string, file: File): Promise<string
     throw new Error('Formato no permitido (JPEG, PNG, WebP o GIF)')
   }
 
-  const optimizedBlob = await optimizeImage(file)
+  const optimizedFile = await optimizeImage(file)
+  const buffer = await optimizedFile.arrayBuffer()
   const ext = 'webp' // Forzado a webp por optimización
   const path = `${userId}/${crypto.randomUUID()}.${ext}`
 
@@ -89,7 +90,7 @@ export async function uploadPetPhoto(userId: string, file: File): Promise<string
 
   await withTimeout(
     (async () => {
-      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, optimizedBlob, {
+      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, buffer, {
         contentType: 'image/webp',
         upsert: false,
         cacheControl: '31536000', // 1 año de caché para optimizar egress
