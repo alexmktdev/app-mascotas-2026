@@ -1,5 +1,6 @@
 /**
  * Subida de fotos de mascotas a Supabase Storage (bucket pet-photos).
+ * Flujo simple: solo JPEG/PNG, archivo tal cual (sin recompresión en cliente).
  */
 
 import { supabase } from '@/lib/supabase'
@@ -11,7 +12,6 @@ import {
   PET_PHOTO_MIME_TYPES,
 } from '@/constants'
 import { isEphemeralImageRef } from '@/utils'
-import { optimizeImage } from '@/utils/imageOptimization'
 
 const ALLOWED = new Set<string>(PET_PHOTO_MIME_TYPES)
 
@@ -54,61 +54,46 @@ export async function primeSignedUrlsCache(storagePaths: string[]): Promise<void
     return !hit || hit.exp <= now
   })
 
-  // Evitar llamadas vacías
   if (needed.length === 0) return
 
-  const { data, error } = await supabase.storage
-    .from(PET_PHOTOS_BUCKET)
-    .createSignedUrls(needed, 3600)
+  const { data, error } = await supabase.storage.from(PET_PHOTOS_BUCKET).createSignedUrls(needed, 3600)
 
   if (error || !data) return
 
-  // Guardar en caché local
   for (const item of data) {
     if (item.error || !item.signedUrl || !item.path) continue
-    // createSignedUrls a veces devuelve el path tal cual se pidió
     signedUrlCache.set(item.path, { url: item.signedUrl, exp: now + 50 * 60 * 1000 })
   }
 }
 
-
+function extensionForMime(mime: string): 'jpg' | 'png' {
+  return mime === 'image/png' ? 'png' : 'jpg'
+}
 
 export async function uploadPetPhoto(userId: string, file: File): Promise<string> {
   if (file.size > PET_PHOTO_MAX_BYTES) {
     throw new Error(`Cada imagen puede pesar como máximo ${PET_PHOTO_MAX_SIZE_LABEL_ES}`)
   }
   if (!ALLOWED.has(file.type)) {
-    throw new Error('Formato no permitido (JPEG, PNG, WebP o GIF)')
+    throw new Error('Solo se permiten fotos JPEG o PNG')
   }
 
-  // Listado y detalle no necesitan más de ~960px; menos píxeles = canvas y subida más rápidos.
-  // Sin tope, un JPEG enorme en un dispositivo lento puede dejar el formulario en "cargando" indefinidamente.
-  const OPTIMIZE_MS = 45_000
-  const optimizedFile = await withTimeout(
-    optimizeImage(file, {
-      maxWidth: 960,
-      maxHeight: 960,
-      quality: 0.78,
-    }),
-    OPTIMIZE_MS,
-    'Tiempo de espera al preparar la imagen (compresión). Prueba con otra foto o desde otro dispositivo.',
-  )
-  const ext = 'webp' // Forzado a webp por optimización
+  const ext = extensionForMime(file.type)
   const path = `${userId}/${crypto.randomUUID()}.${ext}`
 
-  const UPLOAD_MS = 70_000
+  const UPLOAD_MS = 90_000
 
   await withTimeout(
     (async () => {
-      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, optimizedFile, {
-        contentType: 'image/webp',
+      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, file, {
+        contentType: file.type,
         upsert: false,
-        cacheControl: '31536000', // 1 año de caché para optimizar egress
+        cacheControl: '31536000',
       })
       if (error) throw error
     })(),
     UPLOAD_MS,
-    'Tiempo de espera al subir la foto. Si tu conexión es lenta, espera un poco o prueba desde otra red; si el archivo es muy grande, prueba con otra imagen.',
+    `Tiempo de espera al subir la foto (máx. ${PET_PHOTO_MAX_SIZE_LABEL_ES}). Revisa la conexión o prueba con otra imagen.`,
   )
 
   const { data } = supabase.storage.from(PET_PHOTOS_BUCKET).getPublicUrl(path)
@@ -127,8 +112,6 @@ export async function deletePetPhotos(urls: string[]): Promise<void> {
 
   const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).remove(paths)
   if (error) {
-    // No lanzamos error para no bloquear el borrado de la ficha si falla Storage,
-    // pero lo logueamos para auditoría.
     console.warn('[Storage] Error al eliminar fotos:', error.message)
   }
 }

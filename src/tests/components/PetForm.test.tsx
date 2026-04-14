@@ -27,8 +27,10 @@ describe('PetForm', () => {
     render(<PetForm mode="create" userId="u1" onSubmit={vi.fn()} />)
     const input = screen.getByLabelText(/Seleccionar imagen para la ficha de la mascota/i)
     expect(input).toHaveAttribute('type', 'file')
-    expect(input.getAttribute('accept')).toContain('image/jpeg')
-    expect(input.getAttribute('accept')).toContain('image/png')
+    const accept = input.getAttribute('accept') ?? ''
+    expect(accept).toContain('image/jpeg')
+    expect(accept).toContain('image/png')
+    expect(accept).not.toContain('image/webp')
     expect(input.className).toMatch(/hidden/)
   })
 
@@ -39,7 +41,7 @@ describe('PetForm', () => {
     // Simula un change directo (p. ej. drag&drop o bug del SO); userEvent.upload omite archivos fuera de `accept`.
     fireEvent.change(input, { target: { files: [bad] } })
     expect(toast.error).toHaveBeenCalledWith(
-      expect.stringMatching(/formato no permitido/i),
+      expect.stringMatching(/solo se permiten fotos jpeg o png/i),
     )
     expect(screen.queryByText(/Nueva foto/i)).not.toBeInTheDocument()
   })

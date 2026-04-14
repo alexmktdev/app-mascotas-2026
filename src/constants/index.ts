@@ -167,7 +167,8 @@ export const PET_PHOTO_MAX_SIZE_LABEL_ES =
   PET_PHOTO_MAX_BYTES >= 1024 * 1024
     ? `${(PET_PHOTO_MAX_BYTES / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`
     : `${Math.round(PET_PHOTO_MAX_BYTES / 1024)} KB`
-export const PET_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const
+/** Subida simple a Storage: solo JPEG y PNG (compatibles con URLs existentes .webp/.gif ya guardadas). */
+export const PET_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png'] as const
 export const PET_PHOTO_ACCEPT_ATTR = PET_PHOTO_MIME_TYPES.join(',')
 
 // ──────────────────────────────────────────────

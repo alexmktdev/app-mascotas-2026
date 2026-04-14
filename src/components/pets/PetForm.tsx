@@ -153,7 +153,7 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
       return
     }
     if (!allowedMime.has(file.type)) {
-      toast.error('Formato no permitido (JPEG, PNG, WebP o GIF)')
+      toast.error('Solo se permiten fotos JPEG o PNG')
       return
     }
     setPhotoEntries((prev) => [...prev, { kind: 'new', file, localId: crypto.randomUUID() }])
@@ -396,7 +396,7 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
       <fieldset className="space-y-4 rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
         <legend className="px-2 text-sm font-bold text-surface-800">Fotos (Supabase Storage)</legend>
         <p className="text-sm text-surface-500">
-          Hasta {PET_PHOTO_MAX_COUNT} imágenes, máximo {PET_PHOTO_MAX_SIZE_LABEL_ES} cada una (JPEG, PNG, WebP o GIF).
+          Hasta {PET_PHOTO_MAX_COUNT} imágenes, máximo {PET_PHOTO_MAX_SIZE_LABEL_ES} cada una (solo JPEG o PNG).
         </p>
 
         {photoEntries.map((entry, index) => (
