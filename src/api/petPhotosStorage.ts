@@ -71,24 +71,7 @@ export async function primeSignedUrlsCache(storagePaths: string[]): Promise<void
   }
 }
 
-function extensionFor(file: File): string {
-  switch (file.type) {
-    case 'image/jpeg':
-      return 'jpg'
-    case 'image/png':
-      return 'png'
-    case 'image/webp':
-      return 'webp'
-    case 'image/gif':
-      return 'gif'
-    default: {
-      const ext = file.name.split('.').pop()?.toLowerCase()
-      if (ext === 'jpeg' || ext === 'jpg') return 'jpg'
-      if (ext === 'png' || ext === 'webp' || ext === 'gif') return ext
-      return 'jpg'
-    }
-  }
-}
+
 
 export async function uploadPetPhoto(userId: string, file: File): Promise<string> {
   if (file.size > PET_PHOTO_MAX_BYTES) {
