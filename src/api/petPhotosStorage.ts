@@ -80,27 +80,54 @@ export async function uploadPetPhoto(userId: string, file: File): Promise<string
 
   const ext = extensionForMime(file.type)
   const path = `${userId}/${crypto.randomUUID()}.${ext}`
-  const READ_FILE_MS = 20_000
-  const fileBytes = await withTimeout(
-    file.arrayBuffer(),
-    READ_FILE_MS,
-    'No se pudo leer la imagen para subirla. Intenta con otra foto o vuelve a seleccionar el archivo.',
-  )
+  const UPLOAD_ATTEMPT_MS = 45_000
+  const MAX_ATTEMPTS = 2
 
-  const UPLOAD_MS = 90_000
+  let lastError: unknown = null
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    console.log('[Storage] Intentando subir foto', { path, fileSize: file.size, mimeType: file.type, attempt })
+    try {
+      await withTimeout(
+        (async () => {
+          const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, file, {
+            contentType: file.type,
+            upsert: false,
+            cacheControl: '31536000',
+          })
+          if (error) throw error
+        })(),
+        UPLOAD_ATTEMPT_MS,
+        `Tiempo de espera al subir la foto (intento ${attempt}/${MAX_ATTEMPTS}).`,
+      )
+      console.log('[Storage] Resultado intento', { attempt, error: null, success: true })
+      lastError = null
+      break
+    } catch (err) {
+      console.log('[Storage] Resultado intento', { attempt, error: err, success: false })
+      lastError = err
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, 300))
+      }
+    }
+  }
 
-  await withTimeout(
-    (async () => {
-      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, fileBytes, {
-        contentType: file.type,
-        upsert: false,
-        cacheControl: '31536000',
-      })
-      if (error) throw error
-    })(),
-    UPLOAD_MS,
-    `Tiempo de espera al subir la foto (máx. ${PET_PHOTO_MAX_SIZE_LABEL_ES}). Revisa la conexión o prueba con otra imagen.`,
-  )
+  if (lastError) {
+    const candidate = lastError as { message?: string; details?: string; hint?: string; name?: string; code?: string }
+    console.error('[Storage] Error upload fotos:', {
+      message: candidate?.message,
+      details: candidate?.details,
+      hint: candidate?.hint,
+      code: candidate?.code,
+      name: candidate?.name,
+    })
+    const msg =
+      candidate?.message ||
+      candidate?.details ||
+      candidate?.hint ||
+      candidate?.name ||
+      `No se pudo subir la foto (máx. ${PET_PHOTO_MAX_SIZE_LABEL_ES}).`
+    throw new Error(msg)
+  }
 
   const { data } = supabase.storage.from(PET_PHOTOS_BUCKET).getPublicUrl(path)
   return data.publicUrl

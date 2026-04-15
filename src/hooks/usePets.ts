@@ -18,6 +18,18 @@ import type { PetFilters, AdminPetFilters, PetInsert, PetUpdate, Pet } from '@/t
 import { DASHBOARD_REFETCH_INTERVAL } from '@/constants'
 import toast from 'react-hot-toast'
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message?.trim()) return error.message
+  if (typeof error === 'string' && error.trim()) return error
+  if (error && typeof error === 'object') {
+    const candidate = error as Record<string, unknown>
+    const preferred = [candidate.message, candidate.error_description, candidate.details, candidate.hint]
+      .find((v) => typeof v === 'string' && v.trim()) as string | undefined
+    if (preferred) return preferred
+  }
+  return fallback
+}
+
 // ──────────────────────────────────────────────
 // Público: lista de mascotas con filtros
 // ──────────────────────────────────────────────
@@ -106,9 +118,20 @@ export function useCreatePet() {
       toast.success('Mascota registrada exitosamente')
     },
     onError: (error: unknown) => {
-      const err = error instanceof Error ? error : null
-      const name = err?.name ?? ''
-      const msg = err?.message ?? String(error)
+      console.error('[useCreatePet] Error completo:', {
+        message: error instanceof Error ? error.message : String(error),
+        name: error instanceof Error ? error.name : undefined,
+        code: (error as { code?: string })?.code,
+        details: (error as { details?: string })?.details,
+        hint: (error as { hint?: string })?.hint,
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+      const name =
+        (error instanceof Error && error.name) ||
+        (error && typeof error === 'object' && typeof (error as { name?: unknown }).name === 'string'
+          ? (error as { name: string }).name
+          : '')
+      const msg = getErrorMessage(error, 'No se pudo registrar la mascota.')
       if (name === 'AbortError' || /aborted|abort/i.test(msg)) {
         toast.error(
           'La petición tardó demasiado o se canceló. Comprueba tu red, que el proyecto Supabase esté activo y vuelve a intentarlo.',
@@ -145,7 +168,7 @@ export function useUpdatePet() {
       toast.success('Mascota actualizada exitosamente')
     },
     onError: (error: unknown) => {
-      const msg = error instanceof Error ? error.message : String(error)
+      const msg = getErrorMessage(error, 'No se pudo actualizar la mascota.')
       if (/tiempo máximo agotado/i.test(msg)) {
         toast.error(msg)
         return
@@ -180,7 +203,7 @@ export function useDeletePet() {
       toast.success('Mascota eliminada')
     },
     onError: (error: unknown) => {
-      const msg = error instanceof Error ? error.message : String(error)
+      const msg = getErrorMessage(error, 'No se pudo eliminar la mascota.')
       const aborted =
         (typeof DOMException !== 'undefined' &&
           error instanceof DOMException &&

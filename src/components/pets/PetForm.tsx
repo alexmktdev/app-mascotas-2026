@@ -24,6 +24,18 @@ import { Plus, Trash2, AlertCircle } from 'lucide-react'
 import type { Pet } from '@/types'
 import toast from 'react-hot-toast'
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message?.trim()) return error.message
+  if (typeof error === 'string' && error.trim()) return error
+  if (error && typeof error === 'object') {
+    const candidate = error as Record<string, unknown>
+    const preferred = [candidate.message, candidate.error_description, candidate.details, candidate.hint]
+      .find((v) => typeof v === 'string' && v.trim()) as string | undefined
+    if (preferred) return preferred
+  }
+  return fallback
+}
+
 /** Miniatura de un archivo local: crea blob en efecto y lo revoca al desmontar (no guardar esa URL en estado global). */
 /** Miniatura de un archivo local: memoizada para evitar parpadeos/re-renders innecesarios. */
 const LocalFilePreview = memo(function LocalFilePreview({ file, className }: { file: File; className?: string }) {
@@ -169,6 +181,8 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
   const submit = handleSubmit(
     async (data) => {
       const hasNew = photoEntries.some((e) => e.kind === 'new')
+      const photoCount = photoEntries.length
+      console.log('[PetForm] Submit iniciado', { photoCount, hasNewPhotos: hasNew, userId })
       if (hasNew && !userId) {
         toast.error('Debes iniciar sesión para subir fotos')
         return
@@ -182,14 +196,18 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
           (async () => {
             setSubmitStage('upload')
             const photo_urls: string[] = []
-            for (const e of photoEntries) {
-              if (e.kind === 'existing') {
-                if (!isEphemeralImageRef(e.url)) photo_urls.push(e.url)
+            for (const [i, entry] of photoEntries.entries()) {
+              if (entry.kind === 'existing') {
+                if (!isEphemeralImageRef(entry.url)) photo_urls.push(entry.url)
+                console.log('[PetForm] Foto existente procesada', { index: i, urlPreview: entry.url.substring(0, 50) + '...' })
               } else {
-                photo_urls.push(await uploadPetPhoto(userId!, e.file))
+                const uploadedUrl = await uploadPetPhoto(userId!, entry.file)
+                photo_urls.push(uploadedUrl)
+                console.log('[PetForm] Foto nueva subida', { index: i, urlPreview: uploadedUrl.substring(0, 50) + '...' })
               }
             }
 
+            console.log('[PetForm] Llamando onSubmit con', { photoUrls: photo_urls })
             setSubmitStage('save')
             await onSubmit({ ...data, photo_urls })
           })(),
@@ -197,7 +215,8 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
           'La operación está tardando demasiado. Se desbloqueó el formulario para que puedas reintentar.',
         )
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'No se pudieron subir las fotos'
+        const msg = getErrorMessage(err, 'No se pudieron subir las fotos')
+        console.error('[PetForm] Error submit:', { message: msg, stack: err instanceof Error ? err.stack : String(err) })
         toast.error(msg)
       } finally {
         setSubmitting(false)

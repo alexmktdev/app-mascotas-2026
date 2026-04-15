@@ -282,12 +282,19 @@ export async function createPet(pet: PetInsert): Promise<Pet> {
     weight_kg: normalizeWeightKg(pet.weight_kg ?? undefined),
   }
 
+  console.log('[DB] Insertando mascota', { name: pet.name, species: pet.species, photoUrls: pet.photo_urls, createdBy: pet.created_by })
+
   const body = toJsonInsertPayload(payload)
 
   /** `.select('id')` sin `.single()` evita errores raros de PostgREST cuando la fila devuelta no coincide con lo esperado. */
   const { data, error } = await supabase.from('pets').insert(body).select('id')
 
-  if (error) throw error
+  console.log('[DB] Resultado createPet', { data, error, rowCount: Array.isArray(data) ? data.length : 1 })
+
+  if (error) {
+    console.error('[DB] Error createPet:', { message: error.message, details: error.details, hint: error.hint, code: error.code })
+    throw error
+  }
 
   const row = Array.isArray(data) ? data[0] : data
   const newId = row && typeof row === 'object' && 'id' in row ? String((row as { id: string }).id) : ''
