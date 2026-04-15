@@ -46,6 +46,47 @@ export default function PetDetail() {
     )
   }
 
+  const healthBadges = [
+    pet.vaccinated && (
+      <Badge key="vaccinated" variant="success">
+        <Syringe className="h-3 w-3" /> Vacunado
+      </Badge>
+    ),
+    pet.sterilized && (
+      <Badge key="sterilized" variant="success">
+        <Scissors className="h-3 w-3" /> Esterilizado
+      </Badge>
+    ),
+    pet.dewormed && (
+      <Badge key="dewormed" variant="success">
+        <Bug className="h-3 w-3" /> Desparasitado
+      </Badge>
+    ),
+    pet.microchip && (
+      <Badge key="microchip" variant="success">
+        <Cpu className="h-3 w-3" /> Con microchip
+      </Badge>
+    ),
+  ].filter(Boolean)
+
+  const compatibilityBadges = [
+    pet.good_with_kids !== null && (
+      <Badge key="kids" variant={pet.good_with_kids ? 'success' : 'warning'}>
+        <Baby className="h-3 w-3" /> {pet.good_with_kids ? 'Bueno con niños' : 'No ideal con niños'}
+      </Badge>
+    ),
+    pet.good_with_dogs !== null && (
+      <Badge key="dogs" variant={pet.good_with_dogs ? 'success' : 'warning'}>
+        <Dog className="h-3 w-3" /> {pet.good_with_dogs ? 'Bueno con perros' : 'No ideal con perros'}
+      </Badge>
+    ),
+    pet.good_with_cats !== null && (
+      <Badge key="cats" variant={pet.good_with_cats ? 'success' : 'warning'}>
+        <Cat className="h-3 w-3" /> {pet.good_with_cats ? 'Bueno con gatos' : 'No ideal con gatos'}
+      </Badge>
+    ),
+  ].filter(Boolean)
+
   return (
     <div className="animate-fade-in">
       {/* Breadcrumb */}
@@ -88,46 +129,20 @@ export default function PetDetail() {
             <InfoCard icon={<Calendar className="h-5 w-5" />} label="Ingreso" value={formatDate(pet.intake_date)} />
           </div>
 
-          {/* Badges de salud */}
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-surface-800">Estado de salud</h3>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant={pet.vaccinated ? 'success' : 'default'}>
-                <Syringe className="h-3 w-3" /> {pet.vaccinated ? 'Vacunado' : 'Sin vacunar'}
-              </Badge>
-              <Badge variant={pet.sterilized ? 'success' : 'default'}>
-                <Scissors className="h-3 w-3" /> {pet.sterilized ? 'Esterilizado' : 'No esterilizado'}
-              </Badge>
-              <Badge variant={pet.dewormed ? 'success' : 'default'}>
-                <Bug className="h-3 w-3" /> {pet.dewormed ? 'Desparasitado' : 'Sin desparasitar'}
-              </Badge>
-              <Badge variant={pet.microchip ? 'success' : 'default'}>
-                <Cpu className="h-3 w-3" /> {pet.microchip ? 'Con microchip' : 'Sin microchip'}
-              </Badge>
+          {healthBadges.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-surface-800">Estado de salud</h3>
+              <div className="flex flex-wrap gap-2">{healthBadges}</div>
             </div>
-          </div>
+          )}
 
           {/* Compatibilidad */}
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-surface-800">Compatibilidad</h3>
-            <div className="flex flex-wrap gap-2">
-              {pet.good_with_kids !== null && (
-                <Badge variant={pet.good_with_kids ? 'success' : 'warning'}>
-                  <Baby className="h-3 w-3" /> {pet.good_with_kids ? 'Bueno con niños' : 'No ideal con niños'}
-                </Badge>
-              )}
-              {pet.good_with_dogs !== null && (
-                <Badge variant={pet.good_with_dogs ? 'success' : 'warning'}>
-                  <Dog className="h-3 w-3" /> {pet.good_with_dogs ? 'Bueno con perros' : 'No ideal con perros'}
-                </Badge>
-              )}
-              {pet.good_with_cats !== null && (
-                <Badge variant={pet.good_with_cats ? 'success' : 'warning'}>
-                  <Cat className="h-3 w-3" /> {pet.good_with_cats ? 'Bueno con gatos' : 'No ideal con gatos'}
-                </Badge>
-              )}
+          {compatibilityBadges.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-surface-800">Compatibilidad</h3>
+              <div className="flex flex-wrap gap-2">{compatibilityBadges}</div>
             </div>
-          </div>
+          )}
 
           {/* Historia */}
           {pet.story && (
