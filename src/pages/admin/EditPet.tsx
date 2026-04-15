@@ -64,8 +64,10 @@ export default function EditPet() {
   const handleSubmit = async (data: PetFormFields) => {
     if (!id || !pet) return
 
+    const hasNew = photoManager.photoEntries.some((e) => e.kind === 'new')
+
     try {
-      const photo_urls = await photoManager.uploadAll()
+      const photo_urls = hasNew ? await photoManager.uploadAll() : []
       const updates = transformPetFieldsToUpdate(data, user?.id ?? null, photo_urls)
       await updatePet.mutateAsync({ id, updates })
       navigate('/admin/pets')

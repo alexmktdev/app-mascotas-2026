@@ -29,7 +29,7 @@ export default function AddPet() {
     }
 
     try {
-      const photo_urls = await photoManager.uploadAll()
+      const photo_urls = hasNew ? await photoManager.uploadAll() : []
       const petData = transformPetFieldsToInsert(data, user?.id ?? null, photo_urls)
       await createPet.mutateAsync(petData)
       navigate('/admin/pets')
