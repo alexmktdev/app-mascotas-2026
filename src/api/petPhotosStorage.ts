@@ -4,7 +4,6 @@
  */
 
 import { supabase } from '@/lib/supabase'
-import { withTimeout } from '@/lib/withTimeout'
 import {
   PET_PHOTOS_BUCKET,
   PET_PHOTO_MAX_BYTES,
@@ -80,57 +79,31 @@ export async function uploadPetPhoto(userId: string, file: File): Promise<string
 
   const ext = extensionForMime(file.type)
   const path = `${userId}/${crypto.randomUUID()}.${ext}`
-  const UPLOAD_ATTEMPT_MS = 45_000
-  const MAX_ATTEMPTS = 2
+  console.log('[Storage] Iniciando upload directo', { path, fileSize: file.size, mimeType: file.type })
+  const startTime = Date.now()
 
-  let lastError: unknown = null
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-    console.log('[Storage] Intentando subir foto', { path, fileSize: file.size, mimeType: file.type, attempt })
-    try {
-      await withTimeout(
-        (async () => {
-          const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, file, {
-            contentType: file.type,
-            upsert: false,
-            cacheControl: '31536000',
-          })
-          if (error) throw error
-        })(),
-        UPLOAD_ATTEMPT_MS,
-        `Tiempo de espera al subir la foto (intento ${attempt}/${MAX_ATTEMPTS}).`,
-      )
-      console.log('[Storage] Resultado intento', { attempt, error: null, success: true })
-      lastError = null
-      break
-    } catch (err) {
-      console.log('[Storage] Resultado intento', { attempt, error: err, success: false })
-      lastError = err
-      if (attempt < MAX_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, 300))
-      }
-    }
-  }
-
-  if (lastError) {
-    const candidate = lastError as { message?: string; details?: string; hint?: string; name?: string; code?: string }
-    console.error('[Storage] Error upload fotos:', {
-      message: candidate?.message,
-      details: candidate?.details,
-      hint: candidate?.hint,
-      code: candidate?.code,
-      name: candidate?.name,
+  const { data, error } = await supabase.storage
+    .from(PET_PHOTOS_BUCKET)
+    .upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+      cacheControl: '31536000',
     })
-    const msg =
-      candidate?.message ||
-      candidate?.details ||
-      candidate?.hint ||
-      candidate?.name ||
-      `No se pudo subir la foto (máx. ${PET_PHOTO_MAX_SIZE_LABEL_ES}).`
-    throw new Error(msg)
+
+  const elapsed = Date.now() - startTime
+  console.log('[Storage] Upload directo completado', { path, elapsedMs: elapsed, error: error ? String(error) : null, data })
+
+  if (error) {
+    console.error('[Storage] Error upload directo:', {
+      message: error.message,
+      errorObj: error,
+    })
+    throw error
   }
 
-  const { data } = supabase.storage.from(PET_PHOTOS_BUCKET).getPublicUrl(path)
-  return data.publicUrl
+  const { data: publicUrlData } = supabase.storage.from(PET_PHOTOS_BUCKET).getPublicUrl(path)
+  console.log('[Storage] URL pública generada', { path, publicUrl: publicUrlData.publicUrl })
+  return publicUrlData.publicUrl
 }
 
 /** Elimina físicamente las imágenes del Storage para no dejar archivos huérfanos. */
