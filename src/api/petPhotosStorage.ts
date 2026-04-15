@@ -80,12 +80,13 @@ export async function uploadPetPhoto(userId: string, file: File): Promise<string
 
   const ext = extensionForMime(file.type)
   const path = `${userId}/${crypto.randomUUID()}.${ext}`
+  const fileBytes = await file.arrayBuffer()
 
   const UPLOAD_MS = 90_000
 
   await withTimeout(
     (async () => {
-      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, file, {
+      const { error } = await supabase.storage.from(PET_PHOTOS_BUCKET).upload(path, fileBytes, {
         contentType: file.type,
         upsert: false,
         cacheControl: '31536000',
