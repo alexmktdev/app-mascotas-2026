@@ -4,7 +4,7 @@
  * Incluye honeypot + timestamp anti-spam.
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useLayoutEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -29,6 +29,11 @@ export default function AdoptionForm() {
   const [formStatus, setFormStatus] = useState<FormStatus>('idle')
   const [isOnCooldown, setIsOnCooldown] = useState(false)
   const formStartTime = useRef(Date.now())
+
+  /** Misma layout que el detalle: el scroll del documento se conserva al cambiar de ruta. */
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
+  }, [petId])
 
   const {
     register,
