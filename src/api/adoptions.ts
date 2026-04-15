@@ -149,6 +149,15 @@ export async function updateAdoptionRequest(
   return data
 }
 
+export async function deleteAdoptionRequest(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('adoption_requests')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
+}
+
 // ──────────────────────────────────────────────
 // Admin: solicitudes recientes (para dashboard)
 // ──────────────────────────────────────────────

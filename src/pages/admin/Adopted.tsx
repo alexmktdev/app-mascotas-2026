@@ -4,18 +4,21 @@
 
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAdminPets } from '@/hooks/usePets'
+import { useAdminPets, useDeletePet } from '@/hooks/usePets'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { SPECIES_LABELS, SPECIES_EMOJI, PET_STATUS_LABELS, PET_STATUS_ADMIN_TABLE } from '@/constants'
 import { formatAge, formatDate } from '@/utils'
 import { PetPhotoImage } from '@/components/pets/PetPhotoImage'
 import type { Pet } from '@/types'
-import { Pencil } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 
 export default function Adopted() {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const { data, isLoading, isError, refetch } = useAdminPets({ status: 'adopted', page })
+  const deletePet = useDeletePet()
+  const [deleteTarget, setDeleteTarget] = useState<Pet | null>(null)
 
   const columns = useMemo<Column<Pet>[]>(() => [
     {
@@ -71,20 +74,31 @@ export default function Adopted() {
     {
       key: 'actions',
       header: 'Acciones',
-      className: 'w-[9rem]',
+      className: 'w-[13rem]',
       render: (pet) => (
-        <button
-          type="button"
-          onClick={() => navigate(`/admin/pets/${pet.id}/edit`)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-violet-500 to-violet-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-violet-600/25 transition hover:from-violet-600 hover:to-violet-700 hover:shadow-lg"
-          aria-label="Ver ficha"
-        >
-          <Pencil className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">Ficha</span>
-        </button>
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <button
+            type="button"
+            onClick={() => navigate(`/admin/pets/${pet.id}/edit`)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-primary-500 to-primary-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-primary-600/25 transition hover:from-primary-600 hover:to-primary-700 hover:shadow-lg"
+            aria-label="Editar"
+          >
+            <Pencil className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">Editar</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeleteTarget(pet)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-rose-500 to-rose-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 transition hover:from-rose-600 hover:to-rose-700 hover:shadow-lg"
+            aria-label="Eliminar"
+          >
+            <Trash2 className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">Eliminar</span>
+          </button>
+        </div>
       ),
     },
-  ], [navigate])
+  ], [navigate, setDeleteTarget])
 
   const paginationConfig = useMemo(() => {
     if (!data) return undefined
@@ -114,6 +128,27 @@ export default function Adopted() {
         emptyTitle="Sin adoptados aún"
         emptyDescription="Cuando se aprueben solicitudes, las mascotas adoptadas aparecerán aquí."
         pagination={paginationConfig}
+      />
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Eliminar mascota adoptada"
+        description={`¿Estás seguro de que deseas eliminar a "${deleteTarget?.name}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+        isLoading={deletePet.isPending}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          try {
+            await deletePet.mutateAsync({
+              id: deleteTarget.id,
+              photoUrls: deleteTarget.photo_urls,
+            })
+          } finally {
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   )

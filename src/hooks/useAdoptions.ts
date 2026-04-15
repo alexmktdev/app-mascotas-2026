@@ -9,6 +9,7 @@ import {
   createAdoptionRequest,
   updateAdoptionRequest,
   fetchRecentAdoptionRequests,
+  deleteAdoptionRequest,
 } from '@/api/adoptions'
 import { withTimeout } from '@/lib/withTimeout'
 import type { AdoptionRequestInsert, AdoptionRequestUpdate, AdoptionRequest } from '@/types'
@@ -60,6 +61,7 @@ export function useRecentAdoptionRequests() {
 
 const ADOPTION_SUBMIT_MS = 90_000
 const ADOPTION_UPDATE_MS = 30_000
+const ADOPTION_DELETE_MS = 30_000
 
 export function useCreateAdoptionRequest() {
   return useMutation({
@@ -100,6 +102,31 @@ export function useUpdateAdoptionStatus() {
     },
     onError: (error: Error) => {
       toast.error(`Error al actualizar solicitud: ${error.message}`)
+    },
+  })
+}
+
+export function useDeleteAdoptionRequest() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      withTimeout(
+        deleteAdoptionRequest(id),
+        ADOPTION_DELETE_MS,
+        'Tiempo máximo agotado al eliminar la solicitud. Intenta nuevamente.',
+      ),
+    retry: false,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adoption-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['adoption-request'] })
+      queryClient.invalidateQueries({ queryKey: ['recent-adoption-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['pet-count'] })
+      toast.success('Solicitud eliminada')
+    },
+    onError: (error: unknown) => {
+      const msg = error instanceof Error ? error.message : String(error)
+      toast.error(`Error al eliminar solicitud: ${msg}`)
     },
   })
 }
