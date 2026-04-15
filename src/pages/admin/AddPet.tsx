@@ -1,56 +1,39 @@
 /**
  * Página: Agregar mascota.
+ * Orquestador: coordina PetForm + PetPhotoUploader + API.
  */
 
 import { useNavigate } from 'react-router-dom'
 import { useCreatePet } from '@/hooks/usePets'
 import { useAuth } from '@/hooks/useAuth'
+import { usePetPhotoManager } from '@/hooks/usePetPhotoManager'
 import { PetForm } from '@/components/pets/PetForm'
-import type { PetFormData } from '@/lib/validations'
-import type { PetInsert } from '@/types'
+import { PetPhotoUploader } from '@/components/pets/PetPhotoUploader'
+import { buildCreateDefaults, transformPetFieldsToInsert } from '@/lib/petTransform'
+import type { PetFormFields } from '@/lib/validations'
+import toast from 'react-hot-toast'
 
 export default function AddPet() {
   const navigate = useNavigate()
   const createPet = useCreatePet()
   const { user } = useAuth()
 
-  const handleSubmit = async (data: PetFormData) => {
-    const petData: PetInsert = {
-      name: data.name.trim(),
-      species: data.species,
-      breed: data.breed?.trim() || null,
-      age_months: data.age_months,
-      gender: data.gender,
-      size: data.size ?? null,
-      color: data.color?.trim() || null,
-      contact_phone:
-        data.contact_phone?.trim() && data.contact_phone.trim() !== '+56'
-          ? data.contact_phone.trim()
-          : null,
-      weight_kg:
-        data.weight_kg != null && typeof data.weight_kg === 'number' && !Number.isNaN(data.weight_kg)
-          ? data.weight_kg
-          : null,
-      sterilized: data.sterilized,
-      vaccinated: data.vaccinated,
-      dewormed: data.dewormed,
-      microchip: data.microchip,
-      health_notes: data.health_notes?.trim() || null,
-      personality: data.personality?.trim() || null,
-      special_needs: data.special_needs?.trim() || null,
-      story: data.story?.trim() || null,
-      status: data.status,
-      photo_urls: data.photo_urls ?? [],
-      drive_folder_id: data.drive_folder_id?.trim() || null,
-      ...(data.intake_date?.trim() ? { intake_date: data.intake_date.trim() } : {}),
-      created_by: user?.id ?? null,
+  const photoManager = usePetPhotoManager({ userId: user?.id ?? '' })
+
+  const handleSubmit = async (data: PetFormFields) => {
+    const hasNew = photoManager.photoEntries.some((e) => e.kind === 'new')
+
+    if (hasNew && !user?.id) {
+      toast.error('Debes iniciar sesión para subir fotos')
+      return
     }
 
     try {
+      const photo_urls = await photoManager.uploadAll()
+      const petData = transformPetFieldsToInsert(data, user?.id ?? null, photo_urls)
       await createPet.mutateAsync(petData)
       navigate('/admin/pets')
     } catch (error) {
-      // Error y toast los gestiona useCreatePet (solo relanzamos para PetForm)
       throw error
     }
   }
@@ -62,7 +45,19 @@ export default function AddPet() {
         <p className="text-sm text-surface-500">Registra una nueva mascota en el sistema</p>
       </div>
 
-      <PetForm mode="create" userId={user?.id} onSubmit={handleSubmit} />
+      <PetForm
+        mode="create"
+        defaultValues={buildCreateDefaults()}
+        onSubmit={handleSubmit}
+        isSubmitting={createPet.isPending || photoManager.isUploading}
+      />
+
+      <PetPhotoUploader
+        photoEntries={photoManager.photoEntries}
+        addPhoto={photoManager.addPhoto}
+        removePhoto={photoManager.removePhoto}
+        isUploading={photoManager.isUploading}
+      />
     </div>
   )
 }

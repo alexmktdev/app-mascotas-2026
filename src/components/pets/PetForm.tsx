@@ -1,256 +1,54 @@
 /**
- * Formulario de mascota reutilizable (crear / editar).
- * Fotos: Supabase Storage. Vista previa local vía blob recreado por archivo (compatible con Strict Mode).
+ * Formulario de mascota — componente presentacional puro.
+ * Solo renderiza campos y maneja validación con react-hook-form + zod.
+ * NO sabe nada de uploads, Storage, ni transformación de datos.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, memo, type ChangeEvent } from 'react'
+import { memo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { petFormSchema, type PetFormData, type PetFormFields } from '@/lib/validations'
+import { petFormSchema, type PetFormFields } from '@/lib/validations'
 import { Button } from '@/components/ui/Button'
 import { SPECIES_LABELS, GENDER_LABELS, PET_SIZE_LABELS } from '@/constants'
-import {
-  PET_PHOTO_ACCEPT_ATTR,
-  PET_PHOTO_MAX_BYTES,
-  PET_PHOTO_MAX_COUNT,
-  PET_PHOTO_MAX_SIZE_LABEL_ES,
-  PET_PHOTO_MIME_TYPES,
-} from '@/constants'
-import { PetPhotoImage } from '@/components/pets/PetPhotoImage'
-import { isEphemeralImageRef } from '@/utils'
-import { uploadPetPhoto } from '@/api/petPhotosStorage'
-import { withTimeout } from '@/lib/withTimeout'
-import { Plus, Trash2, AlertCircle } from 'lucide-react'
-import type { Pet } from '@/types'
-import toast from 'react-hot-toast'
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message?.trim()) return error.message
-  if (typeof error === 'string' && error.trim()) return error
-  if (error && typeof error === 'object') {
-    const candidate = error as Record<string, unknown>
-    const preferred = [candidate.message, candidate.error_description, candidate.details, candidate.hint]
-      .find((v) => typeof v === 'string' && v.trim()) as string | undefined
-    if (preferred) return preferred
-  }
-  return fallback
-}
-
-/** Miniatura de un archivo local: crea blob en efecto y lo revoca al desmontar (no guardar esa URL en estado global). */
-/** Miniatura de un archivo local: memoizada para evitar parpadeos/re-renders innecesarios. */
-const LocalFilePreview = memo(function LocalFilePreview({ file, className }: { file: File; className?: string }) {
-  const [url, setUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    const u = URL.createObjectURL(file)
-    setUrl(u)
-    return () => {
-      URL.revokeObjectURL(u)
-    }
-  }, [file])
-
-  if (!url) {
-    return <div className={`${className ?? ''} bg-surface-100 animate-pulse`} aria-hidden />
-  }
-  return <img src={url} alt="" className={className} />
-})
-
-type PhotoEntry =
-  | { kind: 'existing'; url: string }
-  | { kind: 'new'; file: File; localId: string }
-
-function buildDefaultFields(pet?: Partial<Pet>): PetFormFields {
-  return {
-    name: pet?.name ?? '',
-    species: pet?.species ?? 'dog',
-    breed: pet?.breed ?? '',
-    age_months: pet?.age_months ?? 1,
-    gender: pet?.gender ?? 'male',
-    size: pet?.size ?? undefined,
-    color: pet?.color ?? '',
-    contact_phone: pet?.contact_phone ?? '+56',
-    weight_kg: pet?.weight_kg ?? undefined,
-    sterilized: pet?.sterilized ?? false,
-    vaccinated: pet?.vaccinated ?? false,
-    dewormed: pet?.dewormed ?? false,
-    microchip: pet?.microchip ?? false,
-    health_notes: pet?.health_notes ?? '',
-    personality: pet?.personality ?? '',
-    story: pet?.story ?? '',
-    special_needs: pet?.special_needs ?? '',
-    status: pet?.status ?? 'available',
-    drive_folder_id: pet?.drive_folder_id ?? '',
-    intake_date: pet?.intake_date ?? '',
-  }
-}
+import { AlertCircle } from 'lucide-react'
 
 interface PetFormProps {
   mode: 'create' | 'edit'
-  defaultValues?: Partial<Pet>
-  /** Usuario autenticado (necesario para subir archivos al bucket). */
-  userId: string | null | undefined
-  onSubmit: (data: PetFormData) => void | Promise<void>
+  defaultValues: PetFormFields
+  onSubmit: (data: PetFormFields) => void | Promise<void>
+  isSubmitting?: boolean
 }
 
-const allowedMime = new Set<string>(PET_PHOTO_MIME_TYPES)
-
-export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps) {
-  const [photoEntries, setPhotoEntries] = useState<PhotoEntry[]>([])
-  const [submitting, setSubmitting] = useState(false)
-  const [submitStage, setSubmitStage] = useState<'idle' | 'refresh' | 'upload' | 'save'>('idle')
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const petId = defaultValues?.id
-
-  /**
-   * Crear: un solo objeto de defaults por montaje (misma referencia siempre) y sin reset() en efecto — evita
-   * que RHF vuelva a valores iniciales al escribir en textareas. Editar: defaults memoizados + reset al cambiar mascota/fotos.
-   */
-  const createDefaultsRef = useRef<PetFormFields | null>(null)
-  if (mode === 'create' && !createDefaultsRef.current) {
-    createDefaultsRef.current = buildDefaultFields()
-  }
-
-  const editDefaults = useMemo(() => {
-    if (mode !== 'edit') return null
-    return buildDefaultFields(defaultValues)
-  }, [mode, petId, defaultValues?.photo_urls?.join('|'), defaultValues?.updated_at])
-
-  const formDefaultValues = mode === 'create' ? createDefaultsRef.current! : editDefaults!
+export const PetForm = memo(function PetForm({
+  mode,
+  defaultValues,
+  onSubmit,
+  isSubmitting = false,
+}: PetFormProps) {
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
 
   const {
     register,
     handleSubmit,
-    reset,
-    formState: { errors, isDirty },
+    formState: { errors },
   } = useForm<PetFormFields>({
     resolver: zodResolver(petFormSchema),
-    defaultValues: formDefaultValues,
+    defaultValues,
   })
 
-  /** Flag para saber si ya se intentó enviar (mostrar banner de errores solo después del primer intento). */
-  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
   const validationErrorCount = Object.keys(errors).length
 
-  useEffect(() => {
-    if (mode !== 'edit' || !petId || !editDefaults) return
-    
-    // Si el usuario ya está editando (isDirty), no sobreescribimos sus cambios con datos del servidor
-    // a menos que cambie el ID de la mascota (cambio de página).
-    if (isDirty && prevPetIdRef.current === petId) return
-    
-    reset(editDefaults)
-    prevPetIdRef.current = petId
-    
-    if (defaultValues?.photo_urls?.length) {
-      const persisted = defaultValues.photo_urls.filter((u) => !isEphemeralImageRef(u))
-      setPhotoEntries(persisted.map((url) => ({ kind: 'existing' as const, url })))
-    } else {
-      setPhotoEntries([])
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, petId, editDefaults])
-
-  const prevPetIdRef = useRef<string | undefined>(petId)
-
-  const removeEntry = useCallback((index: number) => {
-    setPhotoEntries((prev) => prev.filter((_, i) => i !== index))
-  }, [])
-
-  const addNewPhoto = useCallback((file: File) => {
-    if (photoEntries.length >= PET_PHOTO_MAX_COUNT) return
-    if (file.size > PET_PHOTO_MAX_BYTES) {
-      toast.error(`Cada imagen puede pesar como máximo ${PET_PHOTO_MAX_SIZE_LABEL_ES}`)
-      return
-    }
-    if (!allowedMime.has(file.type)) {
-      toast.error('Solo se permiten fotos JPEG o PNG')
-      return
-    }
-    setPhotoEntries((prev) => [...prev, { kind: 'new', file, localId: crypto.randomUUID() }])
-  }, [photoEntries.length])
-
-  const onFilePick = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (file) addNewPhoto(file)
-  }
-
-
-
-  const submit = handleSubmit(
-    async (data) => {
-      const hasNew = photoEntries.some((e) => e.kind === 'new')
-      const photoCount = photoEntries.length
-      console.log('[PetForm] Submit iniciado', { photoCount, hasNewPhotos: hasNew, userId })
-      if (hasNew && !userId) {
-        toast.error('Debes iniciar sesión para subir fotos')
-        return
-      }
-
-      setSubmitting(true)
-      setSubmitStage('refresh')
-      const SUBMIT_DEADLINE_MS = 150_000
-      try {
-        await withTimeout(
-          (async () => {
-            setSubmitStage('upload')
-            const photo_urls: string[] = []
-            for (const [i, entry] of photoEntries.entries()) {
-              if (entry.kind === 'existing') {
-                if (!isEphemeralImageRef(entry.url)) photo_urls.push(entry.url)
-                console.log('[PetForm] Foto existente procesada', { index: i, urlPreview: entry.url.substring(0, 50) + '...' })
-              } else {
-                const uploadedUrl = await uploadPetPhoto(userId!, entry.file)
-                photo_urls.push(uploadedUrl)
-                console.log('[PetForm] Foto nueva subida', { index: i, urlPreview: uploadedUrl.substring(0, 50) + '...' })
-              }
-            }
-
-            console.log('[PetForm] Llamando onSubmit con', { photoUrls: photo_urls })
-            setSubmitStage('save')
-            await onSubmit({ ...data, photo_urls })
-          })(),
-          SUBMIT_DEADLINE_MS,
-          'La operación está tardando demasiado. Se desbloqueó el formulario para que puedas reintentar.',
-        )
-      } catch (err) {
-        const msg = getErrorMessage(err, 'No se pudieron subir las fotos')
-        console.error('[PetForm] Error submit:', { message: msg, stack: err instanceof Error ? err.stack : String(err) })
-        toast.error(msg)
-      } finally {
-        setSubmitting(false)
-        setSubmitStage('idle')
-      }
-    },
-    // RHF onInvalid — se ejecuta cuando la validación de Zod falla
-    (_validationErrors) => {
-      setHasAttemptedSubmit(true)
-      if (import.meta.env.DEV) {
-        console.warn('[PetForm] Errores de validación:', _validationErrors)
-      }
-      toast.error('Revisa los campos marcados en rojo antes de continuar.')
-    })
-
-  /** Solo `submitting`: incluye subida de fotos + `await onSubmit` (mutación). `isPending` del padre era redundante y podía desincronizarse. */
-  const buttonLoading = submitting
-
-  const inputClasses = 'w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-sm shadow-sm transition-all placeholder:text-surface-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20'
+  const inputClasses =
+    'w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-sm shadow-sm transition-all placeholder:text-surface-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20'
   const labelClasses = 'mb-1 block text-sm font-medium text-surface-700'
   const errorClasses = 'mt-1 text-xs text-rose-500'
   const checkboxClasses = 'h-4 w-4 rounded border-surface-300 text-primary-600 focus:ring-primary-500'
 
   return (
-    <form onSubmit={submit} className="space-y-8">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={PET_PHOTO_ACCEPT_ATTR}
-        className="hidden"
-        aria-label="Seleccionar imagen para la ficha de la mascota"
-        onChange={onFilePick}
-      />
-
+    <form
+      onSubmit={handleSubmit(onSubmit, () => setHasAttemptedSubmit(true))}
+      className="space-y-8"
+    >
       {/* Información básica */}
       <fieldset className="space-y-4 rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
         <legend className="px-2 text-sm font-bold text-surface-800">Información básica</legend>
@@ -279,7 +77,12 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
 
           <div>
             <label className={labelClasses}>Edad (meses) *</label>
-            <input type="number" {...register('age_months', { valueAsNumber: true })} className={inputClasses} min={0} />
+            <input
+              type="number"
+              {...register('age_months', { valueAsNumber: true })}
+              className={inputClasses}
+              min={0}
+            />
             {errors.age_months && <p className={errorClasses}>{errors.age_months.message}</p>}
           </div>
 
@@ -316,7 +119,12 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
 
           <div>
             <label className={labelClasses}>Peso (kg)</label>
-            <input type="number" step="0.1" {...register('weight_kg', { valueAsNumber: true })} className={inputClasses} />
+            <input
+              type="number"
+              step="0.1"
+              {...register('weight_kg', { valueAsNumber: true })}
+              className={inputClasses}
+            />
           </div>
         </div>
       </fieldset>
@@ -398,44 +206,6 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
         </div>
       </fieldset>
 
-      {/* Fotos */}
-      <fieldset className="space-y-4 rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
-        <legend className="px-2 text-sm font-bold text-surface-800">Fotos (Supabase Storage)</legend>
-        <p className="text-sm text-surface-500">
-          Hasta {PET_PHOTO_MAX_COUNT} imágenes, máximo {PET_PHOTO_MAX_SIZE_LABEL_ES} cada una (solo JPEG o PNG).
-        </p>
-
-        {photoEntries.map((entry, index) => (
-          <div
-            key={entry.kind === 'existing' ? entry.url : entry.localId}
-            className="flex items-start gap-3"
-          >
-            <div className="flex-1">
-              <p className="text-xs font-medium text-surface-600">
-                {entry.kind === 'existing' ? 'Foto guardada' : 'Nueva foto'}
-              </p>
-              <div className="mt-2 h-28 w-28 overflow-hidden rounded-lg border border-surface-200">
-                {entry.kind === 'existing' ? (
-                  <PetPhotoImage photoRef={entry.url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <LocalFilePreview file={entry.file} className="h-full w-full object-cover" />
-                )}
-              </div>
-            </div>
-            <Button type="button" variant="danger" size="sm" onClick={() => removeEntry(index)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-
-        {photoEntries.length < PET_PHOTO_MAX_COUNT && (
-          <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-            <Plus className="h-4 w-4" />
-            Agregar foto
-          </Button>
-        )}
-      </fieldset>
-
       {/* Estado (solo en edición) */}
       {mode === 'edit' && (
         <fieldset className="rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
@@ -448,12 +218,14 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
         </fieldset>
       )}
 
-      {/* Error banner — visible después del primer intento fallido de envío */}
+      {/* Error banner */}
       {hasAttemptedSubmit && validationErrorCount > 0 && (
         <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 animate-fade-in">
           <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" />
           <div>
-            <p className="font-semibold">Hay {validationErrorCount} {validationErrorCount === 1 ? 'campo con error' : 'campos con errores'}</p>
+            <p className="font-semibold">
+              Hay {validationErrorCount} {validationErrorCount === 1 ? 'campo con error' : 'campos con errores'}
+            </p>
             <p className="mt-1 text-rose-600">Revisa los campos marcados en rojo arriba y corrige los datos antes de continuar.</p>
           </div>
         </div>
@@ -461,19 +233,16 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
 
       {/* Submit */}
       <div className="flex justify-end gap-3">
-        <Button type="submit" isLoading={buttonLoading} size="lg" onClick={() => setHasAttemptedSubmit(true)} aria-busy={buttonLoading}>
+        <Button
+          type="submit"
+          isLoading={isSubmitting}
+          size="lg"
+          onClick={() => setHasAttemptedSubmit(true)}
+          aria-busy={isSubmitting}
+        >
           {mode === 'create' ? '🐾 Registrar mascota' : '💾 Guardar cambios'}
         </Button>
       </div>
-      {submitting && (
-        <p className="text-right text-xs font-medium text-surface-500 animate-pulse">
-          {submitStage === 'save'
-            ? '💾 Guardando ficha en el servidor...'
-            : submitStage === 'upload'
-              ? '📷 Subiendo o preparando fotos...'
-              : '⏳ Enviando…'}
-        </p>
-      )}
     </form>
   )
-}
+})
