@@ -23,6 +23,10 @@ export default function AddPet() {
       gender: data.gender,
       size: data.size ?? null,
       color: data.color?.trim() || null,
+      contact_phone:
+        data.contact_phone?.trim() && data.contact_phone.trim() !== '+56'
+          ? data.contact_phone.trim()
+          : null,
       weight_kg:
         data.weight_kg != null && typeof data.weight_kg === 'number' && !Number.isNaN(data.weight_kg)
           ? data.weight_kg
@@ -33,9 +37,6 @@ export default function AddPet() {
       microchip: data.microchip,
       health_notes: data.health_notes?.trim() || null,
       personality: data.personality?.trim() || null,
-      good_with_kids: data.good_with_kids ?? null,
-      good_with_dogs: data.good_with_dogs ?? null,
-      good_with_cats: data.good_with_cats ?? null,
       special_needs: data.special_needs?.trim() || null,
       story: data.story?.trim() || null,
       status: data.status,

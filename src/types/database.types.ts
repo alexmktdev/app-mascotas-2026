@@ -65,6 +65,7 @@ export interface Database {
           gender: 'male' | 'female'
           size: 'small' | 'medium' | 'large' | 'xlarge' | null
           color: string | null
+          contact_phone: string | null
           weight_kg: number | null
           sterilized: boolean
           vaccinated: boolean
@@ -96,6 +97,7 @@ export interface Database {
           gender: 'male' | 'female'
           size?: 'small' | 'medium' | 'large' | 'xlarge' | null
           color?: string | null
+          contact_phone?: string | null
           weight_kg?: number | null
           sterilized?: boolean
           vaccinated?: boolean
@@ -127,6 +129,7 @@ export interface Database {
           gender?: 'male' | 'female'
           size?: 'small' | 'medium' | 'large' | 'xlarge' | null
           color?: string | null
+          contact_phone?: string | null
           weight_kg?: number | null
           sterilized?: boolean
           vaccinated?: boolean

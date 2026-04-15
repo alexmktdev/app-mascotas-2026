@@ -15,7 +15,7 @@ import {
 } from '@/constants'
 import {
   ChevronRight, Heart, Syringe, Scissors, Bug, Cpu,
-  Baby, Dog, Cat, AlertCircle, Calendar, Scale, BookOpen,
+  AlertCircle, Calendar, Scale, BookOpen, Phone, Dog,
 } from 'lucide-react'
 
 export default function PetDetail() {
@@ -69,24 +69,6 @@ export default function PetDetail() {
     ),
   ].filter(Boolean)
 
-  const compatibilityBadges = [
-    pet.good_with_kids !== null && (
-      <Badge key="kids" variant={pet.good_with_kids ? 'success' : 'warning'}>
-        <Baby className="h-3 w-3" /> {pet.good_with_kids ? 'Bueno con niños' : 'No ideal con niños'}
-      </Badge>
-    ),
-    pet.good_with_dogs !== null && (
-      <Badge key="dogs" variant={pet.good_with_dogs ? 'success' : 'warning'}>
-        <Dog className="h-3 w-3" /> {pet.good_with_dogs ? 'Bueno con perros' : 'No ideal con perros'}
-      </Badge>
-    ),
-    pet.good_with_cats !== null && (
-      <Badge key="cats" variant={pet.good_with_cats ? 'success' : 'warning'}>
-        <Cat className="h-3 w-3" /> {pet.good_with_cats ? 'Bueno con gatos' : 'No ideal con gatos'}
-      </Badge>
-    ),
-  ].filter(Boolean)
-
   return (
     <div className="animate-fade-in">
       {/* Breadcrumb */}
@@ -126,6 +108,7 @@ export default function PetDetail() {
             {pet.size && <InfoCard icon={<Scale className="h-5 w-5" />} label="Tamaño" value={PET_SIZE_LABELS[pet.size] ?? pet.size} />}
             {pet.weight_kg && <InfoCard icon={<Scale className="h-5 w-5" />} label="Peso" value={`${pet.weight_kg} kg`} />}
             {pet.color && <InfoCard icon={<Dog className="h-5 w-5" />} label="Color" value={pet.color} />}
+            {pet.contact_phone && <InfoCard icon={<Phone className="h-5 w-5" />} label="Fono de contacto" value={pet.contact_phone} />}
             <InfoCard icon={<Calendar className="h-5 w-5" />} label="Ingreso" value={formatDate(pet.intake_date)} />
           </div>
 
@@ -133,14 +116,6 @@ export default function PetDetail() {
             <div>
               <h3 className="mb-2 text-sm font-semibold text-surface-800">Estado de salud</h3>
               <div className="flex flex-wrap gap-2">{healthBadges}</div>
-            </div>
-          )}
-
-          {/* Compatibilidad */}
-          {compatibilityBadges.length > 0 && (
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-surface-800">Compatibilidad</h3>
-              <div className="flex flex-wrap gap-2">{compatibilityBadges}</div>
             </div>
           )}
 

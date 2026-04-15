@@ -80,7 +80,12 @@ export async function uploadPetPhoto(userId: string, file: File): Promise<string
 
   const ext = extensionForMime(file.type)
   const path = `${userId}/${crypto.randomUUID()}.${ext}`
-  const fileBytes = await file.arrayBuffer()
+  const READ_FILE_MS = 20_000
+  const fileBytes = await withTimeout(
+    file.arrayBuffer(),
+    READ_FILE_MS,
+    'No se pudo leer la imagen para subirla. Intenta con otra foto o vuelve a seleccionar el archivo.',
+  )
 
   const UPLOAD_MS = 90_000
 

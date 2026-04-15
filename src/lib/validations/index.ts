@@ -47,6 +47,16 @@ export const petFormSchema = z.object({
     z.enum(['small', 'medium', 'large', 'xlarge']).optional(),
   ),
   color: z.string().max(50).optional().or(z.literal('')),
+  contact_phone: z.preprocess((val) => {
+    if (typeof val !== 'string') return val
+    const trimmed = val.trim()
+    if (trimmed === '' || trimmed === '+56') return ''
+    return trimmed
+  }, z.string()
+    .regex(/^\+56[\d\s()-]*$/, 'El teléfono debe iniciar con +56')
+    .max(20, 'Máximo 20 caracteres')
+    .optional()
+    .or(z.literal(''))),
   weight_kg: z.preprocess((val) => {
     if (val === '' || val === undefined || val === null) return undefined
     if (typeof val === 'number' && Number.isNaN(val)) return undefined
@@ -59,9 +69,6 @@ export const petFormSchema = z.object({
   health_notes: z.string().max(3000, 'Máximo 3000 caracteres').optional().or(z.literal('')),
   personality: z.string().max(2000, 'Máximo 2000 caracteres').optional().or(z.literal('')),
   story: z.string().max(4000, 'Máximo 4000 caracteres').optional().or(z.literal('')),
-  good_with_kids: z.boolean().optional(),
-  good_with_dogs: z.boolean().optional(),
-  good_with_cats: z.boolean().optional(),
   special_needs: z.string().max(2000, 'Máximo 2000 caracteres').optional().or(z.literal('')),
   status: z.enum(['available', 'in_process', 'adopted']).default('available'),
   drive_folder_id: z.string().optional().or(z.literal('')),

@@ -19,6 +19,7 @@ import {
 import { PetPhotoImage } from '@/components/pets/PetPhotoImage'
 import { isEphemeralImageRef } from '@/utils'
 import { uploadPetPhoto } from '@/api/petPhotosStorage'
+import { withTimeout } from '@/lib/withTimeout'
 import { Plus, Trash2, AlertCircle } from 'lucide-react'
 import type { Pet } from '@/types'
 import toast from 'react-hot-toast'
@@ -55,6 +56,7 @@ function buildDefaultFields(pet?: Partial<Pet>): PetFormFields {
     gender: pet?.gender ?? 'male',
     size: pet?.size ?? undefined,
     color: pet?.color ?? '',
+    contact_phone: pet?.contact_phone ?? '+56',
     weight_kg: pet?.weight_kg ?? undefined,
     sterilized: pet?.sterilized ?? false,
     vaccinated: pet?.vaccinated ?? false,
@@ -63,9 +65,6 @@ function buildDefaultFields(pet?: Partial<Pet>): PetFormFields {
     health_notes: pet?.health_notes ?? '',
     personality: pet?.personality ?? '',
     story: pet?.story ?? '',
-    good_with_kids: pet?.good_with_kids ?? undefined,
-    good_with_dogs: pet?.good_with_dogs ?? undefined,
-    good_with_cats: pet?.good_with_cats ?? undefined,
     special_needs: pet?.special_needs ?? '',
     status: pet?.status ?? 'available',
     drive_folder_id: pet?.drive_folder_id ?? '',
@@ -175,47 +174,44 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
         return
       }
 
-    setSubmitting(true)
-    setSubmitStage('refresh')
-    /** Por si alguna promesa no termina nunca: evita botón colgado sin F5 (p. ej. pestaña en segundo plano). */
-    const safetyMs = 150_000
-    const safetyId = window.setTimeout(() => {
-      setSubmitting(false)
-      setSubmitStage('idle')
-      toast.error(
-        'La operación está tardando demasiado. Se desbloqueó el formulario para que puedas reintentar.',
-      )
-    }, safetyMs)
-    try {
-      setSubmitStage('upload')
-      const photo_urls: string[] = []
-      for (const e of photoEntries) {
-        if (e.kind === 'existing') {
-          if (!isEphemeralImageRef(e.url)) photo_urls.push(e.url)
-        } else {
-          photo_urls.push(await uploadPetPhoto(userId!, e.file))
-        }
-      }
+      setSubmitting(true)
+      setSubmitStage('refresh')
+      const SUBMIT_DEADLINE_MS = 150_000
+      try {
+        await withTimeout(
+          (async () => {
+            setSubmitStage('upload')
+            const photo_urls: string[] = []
+            for (const e of photoEntries) {
+              if (e.kind === 'existing') {
+                if (!isEphemeralImageRef(e.url)) photo_urls.push(e.url)
+              } else {
+                photo_urls.push(await uploadPetPhoto(userId!, e.file))
+              }
+            }
 
-      setSubmitStage('save')
-      await onSubmit({ ...data, photo_urls })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'No se pudieron subir las fotos'
-      toast.error(msg)
-    } finally {
-      window.clearTimeout(safetyId)
-      setSubmitting(false)
-      setSubmitStage('idle')
-    }
-  },
-  // RHF onInvalid — se ejecuta cuando la validación de Zod falla
-  (_validationErrors) => {
-    setHasAttemptedSubmit(true)
-    if (import.meta.env.DEV) {
-      console.warn('[PetForm] Errores de validación:', _validationErrors)
-    }
-    toast.error('Revisa los campos marcados en rojo antes de continuar.')
-  })
+            setSubmitStage('save')
+            await onSubmit({ ...data, photo_urls })
+          })(),
+          SUBMIT_DEADLINE_MS,
+          'La operación está tardando demasiado. Se desbloqueó el formulario para que puedas reintentar.',
+        )
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'No se pudieron subir las fotos'
+        toast.error(msg)
+      } finally {
+        setSubmitting(false)
+        setSubmitStage('idle')
+      }
+    },
+    // RHF onInvalid — se ejecuta cuando la validación de Zod falla
+    (_validationErrors) => {
+      setHasAttemptedSubmit(true)
+      if (import.meta.env.DEV) {
+        console.warn('[PetForm] Errores de validación:', _validationErrors)
+      }
+      toast.error('Revisa los campos marcados en rojo antes de continuar.')
+    })
 
   /** Solo `submitting`: incluye subida de fotos + `await onSubmit` (mutación). `isPending` del padre era redundante y podía desincronizarse. */
   const buttonLoading = submitting
@@ -294,6 +290,12 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
           </div>
 
           <div>
+            <label className={labelClasses}>Fono de contacto</label>
+            <input {...register('contact_phone')} className={inputClasses} placeholder="+56 9 1234 5678" />
+            {errors.contact_phone && <p className={errorClasses}>{errors.contact_phone.message}</p>}
+          </div>
+
+          <div>
             <label className={labelClasses}>Peso (kg)</label>
             <input type="number" step="0.1" {...register('weight_kg', { valueAsNumber: true })} className={inputClasses} />
           </div>
@@ -338,7 +340,7 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
 
       {/* Personalidad */}
       <fieldset className="space-y-4 rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
-        <legend className="px-2 text-sm font-bold text-surface-800">Personalidad y compatibilidad</legend>
+        <legend className="px-2 text-sm font-bold text-surface-800">Personalidad</legend>
 
         <div>
           <label className={labelClasses}>Personalidad</label>
@@ -362,21 +364,6 @@ export function PetForm({ mode, defaultValues, userId, onSubmit }: PetFormProps)
             placeholder="Érase una vez una perrita que vivía en..."
           />
           {errors.story && <p className={errorClasses}>{errors.story.message}</p>}
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" {...register('good_with_kids')} className={checkboxClasses} />
-            <span className="text-sm text-surface-700">Bueno con niños</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" {...register('good_with_dogs')} className={checkboxClasses} />
-            <span className="text-sm text-surface-700">Bueno con perros</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" {...register('good_with_cats')} className={checkboxClasses} />
-            <span className="text-sm text-surface-700">Bueno con gatos</span>
-          </label>
         </div>
 
         <div>

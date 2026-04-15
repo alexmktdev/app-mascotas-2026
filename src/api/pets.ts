@@ -71,6 +71,7 @@ function petFromInsertResult(id: string, payload: PetInsert): Pet {
     gender: payload.gender,
     size: payload.size ?? null,
     color: payload.color ?? null,
+    contact_phone: payload.contact_phone ?? null,
     weight_kg: payload.weight_kg ?? null,
     sterilized: payload.sterilized ?? false,
     vaccinated: payload.vaccinated ?? false,
