@@ -1,6 +1,7 @@
 import { useEffect, useState, memo } from 'react'
 import { getDownloadURL, ref } from 'firebase/storage'
 import { storage } from '@/lib/firebase'
+import { getCachedUrl, setCachedUrl } from '@/hooks/usePreloadPetImages'
 
 interface PetPhotoImageProps {
   photoRef: string
@@ -9,27 +10,6 @@ interface PetPhotoImageProps {
   imageClassName?: string
   loading?: 'eager' | 'lazy'
   aspectRatio?: string
-}
-
-const memoryCache = new Map<string, string>()
-
-function getCachedUrl(key: string): string | null {
-  if (memoryCache.has(key)) return memoryCache.get(key)!
-  try {
-    const stored = sessionStorage.getItem(`img:${key}`)
-    if (stored) {
-      memoryCache.set(key, stored)
-      return stored
-    }
-  } catch { /* ignore */ }
-  return null
-}
-
-function setCachedUrl(key: string, url: string): void {
-  memoryCache.set(key, url)
-  try {
-    sessionStorage.setItem(`img:${key}`, url)
-  } catch { /* ignore */ }
 }
 
 export const PetPhotoImage = memo(function PetPhotoImage({

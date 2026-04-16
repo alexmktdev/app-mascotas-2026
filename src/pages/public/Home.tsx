@@ -2,20 +2,28 @@
  * Página principal — Banner Molina + mascotas disponibles.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { usePets } from '@/hooks/usePets'
+import { usePreloadPetImages } from '@/hooks/usePreloadPetImages'
 import { PetCard } from '@/components/pets/PetCard'
 import { PetFilters } from '@/components/pets/PetFilters'
 import { PetCardSkeleton } from '@/components/ui/Skeleton'
 import { Pagination } from '@/components/ui/Pagination'
 import { EmptyState } from '@/components/ui/EmptyState'
-import type { PetFilters as PetFiltersType } from '@/types'
+import type { PetFilters as PetFiltersType } from '@/types/firebase.types'
 import { Search, Heart, Shield, Phone, Dog } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 export default function Home() {
   const [filters, setFilters] = useState<PetFiltersType>({ page: 1 })
   const { data, isLoading, error } = usePets(filters)
+
+  const allPhotoUrls = useMemo(() => {
+    if (!data?.data) return []
+    return [...new Set(data.data.flatMap((pet) => pet.photo_urls ?? []))]
+  }, [data])
+
+  usePreloadPetImages(allPhotoUrls)
 
   const handleFiltersChange = useCallback((newFilters: PetFiltersType) => {
     setFilters(newFilters)
