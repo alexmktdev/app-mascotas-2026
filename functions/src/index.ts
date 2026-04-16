@@ -565,10 +565,6 @@ export const updateAdoptionRequest = regionalFunctions.https.onCall(async (data,
     throw new functions.https.HttpsError('invalid-argument', 'Debe proporcionar status o admin_notes')
   }
 
-  if (status && !['pending', 'reviewing', 'approved', 'rejected'].includes(status)) {
-    throw new functions.https.HttpsError('invalid-argument', 'Status inválido')
-  }
-
   const requestRef = db.collection('adoption_requests').doc(id)
   const requestSnap = await requestRef.get()
   if (!requestSnap.exists) {
@@ -576,6 +572,7 @@ export const updateAdoptionRequest = regionalFunctions.https.onCall(async (data,
   }
 
   const existing = requestSnap.data()
+  const existingStatus = existing?.status ?? 'pending'
   const now = new Date().toISOString()
 
   const updateData: Record<string, unknown> = {
@@ -583,7 +580,14 @@ export const updateAdoptionRequest = regionalFunctions.https.onCall(async (data,
     reviewed_at: now,
   }
   if (admin_notes !== undefined) updateData.admin_notes = admin_notes
-  if (status !== undefined) updateData.status = status
+  if (status !== undefined) {
+    if (!['pending', 'reviewing', 'approved', 'rejected'].includes(status)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Status inválido')
+    }
+    updateData.status = status
+  } else {
+    updateData.status = existingStatus
+  }
 
   await requestRef.update(updateData)
 
