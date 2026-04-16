@@ -293,52 +293,43 @@ function AdoptionEditDialog({
   onClose: () => void
 }) {
   const updateStatus = useUpdateAdoptionStatus()
-  const [fullName, setFullName] = useState(request.full_name)
-  const [email, setEmail] = useState(request.email)
-  const [phone, setPhone] = useState(request.phone)
-  const [city, setCity] = useState(request.city)
-  const [address, setAddress] = useState(request.address)
+  const [status, setStatus] = useState(request.status)
 
   const handleSave = async () => {
     try {
       await updateStatus.mutateAsync({
         id: request.id,
-        updates: {
-          // Los campos del solicitante no son editables via Cloud Function
-          // (para corregir datos habría que agregar lógica específica en updateAdoptionRequest)
-        },
+        updates: { status },
       })
     } finally {
       onClose()
     }
   }
 
-  const inputClasses =
-    'w-full rounded-xl border border-surface-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20'
-
   return (
     <dialog open className="fixed inset-0 z-50 m-auto w-[min(92vw,40rem)] rounded-2xl border-0 bg-white p-6 shadow-2xl backdrop:bg-black/50 animate-scale-in">
-      <h3 className="mb-4 text-xl font-bold text-surface-900">Editar solicitud</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <h3 className="mb-4 text-xl font-bold text-surface-900">Editar estado de solicitud</h3>
+      <div className="space-y-4">
+        <div className="rounded-xl border border-surface-200 bg-surface-50 p-4">
+          <p className="text-sm text-surface-600">
+            <span className="font-semibold">Solicitante:</span> {request.full_name}
+          </p>
+          <p className="text-sm text-surface-600">
+            <span className="font-semibold">Mascota:</span> {request.pet_name ?? '—'}
+          </p>
+        </div>
         <label className="space-y-1 text-sm text-surface-700">
-          <span className="font-medium">Nombre completo</span>
-          <input className={inputClasses} value={fullName} onChange={(e) => setFullName(e.target.value)} />
-        </label>
-        <label className="space-y-1 text-sm text-surface-700">
-          <span className="font-medium">Correo</span>
-          <input className={inputClasses} value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-        <label className="space-y-1 text-sm text-surface-700">
-          <span className="font-medium">Teléfono</span>
-          <input className={inputClasses} value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </label>
-        <label className="space-y-1 text-sm text-surface-700">
-          <span className="font-medium">Ciudad</span>
-          <input className={inputClasses} value={city} onChange={(e) => setCity(e.target.value)} />
-        </label>
-        <label className="space-y-1 text-sm text-surface-700 sm:col-span-2">
-          <span className="font-medium">Dirección</span>
-          <input className={inputClasses} value={address} onChange={(e) => setAddress(e.target.value)} />
+          <span className="font-medium">Estado de la solicitud</span>
+          <select
+            className="w-full rounded-xl border border-surface-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as AdminAdoptionRow['status'])}
+          >
+            <option value="pending">Pendiente</option>
+            <option value="reviewing">En revisión</option>
+            <option value="approved">Aprobado</option>
+            <option value="rejected">Rechazado</option>
+          </select>
         </label>
       </div>
       <div className="mt-5 flex justify-end gap-3">
