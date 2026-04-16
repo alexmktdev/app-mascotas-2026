@@ -2,13 +2,15 @@
  * Layout público (Home, PetDetail, AdoptionForm).
  */
 
-import { Outlet } from 'react-router-dom'
+import { Outlet, ScrollRestoration } from 'react-router-dom'
 import { PublicHeader } from './PublicHeader'
 import { PawPrint, Dog, Cat } from 'lucide-react'
 
 export function PublicLayout() {
   return (
-    <div className="min-h-screen flex flex-col bg-surface-50 relative overflow-hidden">
+    <>
+      <ScrollRestoration />
+      <div className="min-h-screen flex flex-col bg-surface-50 relative overflow-hidden">
       {/* Background decoration - Huellitas */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-[0.03]">
         <PawPrint className="absolute top-40 left-10 h-32 w-32 rotate-12" />
@@ -40,6 +42,7 @@ export function PublicLayout() {
           </p>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   )
 }
