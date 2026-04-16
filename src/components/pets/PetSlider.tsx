@@ -20,7 +20,7 @@ function frameClass(size: 'card' | 'detail') {
   if (size === 'detail') {
     return 'aspect-square w-full min-h-0 overflow-hidden bg-surface-100'
   }
-  return 'h-64 min-h-0 overflow-hidden bg-surface-100'
+  return 'aspect-square w-full min-h-0 overflow-hidden bg-surface-100'
 }
 
 export function PetSlider({ photoUrls, petName, size = 'card', cardIndex = 99 }: PetSliderProps) {
@@ -36,8 +36,12 @@ export function PetSlider({ photoUrls, petName, size = 'card', cardIndex = 99 }:
   }, [emblaApi])
 
   const frame = frameClass(size)
-  const imgClass =
-    'h-full w-full min-h-0 object-cover object-center'
+  const imageWrapperClass = size === 'card'
+    ? 'h-full w-full p-1.5'
+    : 'h-full w-full'
+  const imgClass = size === 'card'
+    ? 'h-full w-full min-h-0 rounded-2xl border border-surface-200 bg-white object-cover object-center shadow-sm'
+    : 'h-full w-full min-h-0 object-cover object-center'
 
   if (!photoUrls || photoUrls.length === 0) {
     return (
@@ -56,9 +60,9 @@ export function PetSlider({ photoUrls, petName, size = 'card', cardIndex = 99 }:
         <PetPhotoImage
           photoRef={photoUrls[0]!}
           alt={petName}
-          driveSize={size}
           loading={cardIndex < 3 ? 'eager' : 'lazy'}
-          className={imgClass}
+          className={imageWrapperClass}
+          imageClassName={imgClass}
         />
       </div>
     )
@@ -73,9 +77,9 @@ export function PetSlider({ photoUrls, petName, size = 'card', cardIndex = 99 }:
               <PetPhotoImage
                 photoRef={url}
                 alt={`${petName} - Foto ${idx + 1}`}
-                driveSize={size}
                 loading={cardIndex < 3 && idx === 0 ? 'eager' : 'lazy'}
-                className={imgClass}
+                className={imageWrapperClass}
+                imageClassName={imgClass}
               />
             </div>
           ))}
