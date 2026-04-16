@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations'
-import { supabase } from '@/lib/supabase'
+import { auth } from '@/lib/firebase'
+import { confirmPasswordReset } from 'firebase/auth'
 import { Button } from '@/components/ui/Button'
 import { Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react'
 
@@ -23,26 +24,24 @@ export default function ResetPassword() {
   })
 
   useEffect(() => {
-    // Verificar que tenemos una sesión activa (el enlace de recuperación crea una sesión temporal)
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        setServerError('El enlace de recuperación ha expirado o no es válido. Por favor, solicita uno nuevo.')
-      }
-      setIsValidating(false)
+    const params = new URLSearchParams(window.location.search)
+    const oobCode = params.get('oobCode')
+    if (!oobCode) {
+      setServerError('El enlace de recuperación ha expirado o no es válido. Por favor, solicita uno nuevo.')
     }
-    checkSession()
+    setIsValidating(false)
   }, [])
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     setServerError('')
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: data.password,
-      })
-      if (error) throw error
+      const params = new URLSearchParams(window.location.search)
+      const oobCode = params.get('oobCode')
+      if (!oobCode) {
+        throw new Error('Código de recuperación no encontrado')
+      }
+      await confirmPasswordReset(auth, oobCode, data.password)
       setIsDone(true)
-      // Redirigir al login tras 3 segundos
       setTimeout(() => navigate('/login'), 3000)
     } catch (error) {
       setServerError('No se pudo actualizar la contraseña. El enlace puede haber expirado.')

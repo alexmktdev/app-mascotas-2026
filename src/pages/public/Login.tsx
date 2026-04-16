@@ -4,7 +4,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema, forgotPasswordSchema, type LoginFormData, type ForgotPasswordFormData } from '@/lib/validations'
 import { useAuth } from '@/hooks/useAuth'
-import { supabase } from '@/lib/supabase'
+import { sendPasswordResetEmail } from 'firebase/auth'
+import { auth } from '@/lib/firebase'
 import { Button } from '@/components/ui/Button'
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 
@@ -16,12 +17,10 @@ export default function Login() {
   const [serverError, setServerError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
-  // Formulario de Login
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   })
 
-  // Formulario de Recuperación
   const recoveryForm = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
   })
@@ -44,10 +43,7 @@ export default function Login() {
     setServerError('')
     setSuccessMessage('')
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      })
-      if (error) throw error
+      await sendPasswordResetEmail(auth, data.email)
       setSuccessMessage('Si el correo pertenece a un usuario, recibirás un enlace para restablecer tu contraseña en unos minutos.')
     } catch (error) {
       setServerError('Algo salió mal. Por favor, intenta más tarde.')
@@ -202,4 +198,3 @@ export default function Login() {
     </div>
   )
 }
-

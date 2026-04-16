@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { SPECIES_LABELS, SPECIES_EMOJI, PET_STATUS_LABELS, PET_STATUS_ADMIN_TABLE } from '@/constants'
 import { formatAge, formatDate } from '@/utils'
 import { PetPhotoImage } from '@/components/pets/PetPhotoImage'
-import type { Pet } from '@/types'
+import type { Pet } from '@/types/firebase.types'
 import { Pencil, Trash2 } from 'lucide-react'
 
 export default function Adopted() {
@@ -142,7 +142,6 @@ export default function Adopted() {
           try {
             await deletePet.mutateAsync({
               id: deleteTarget.id,
-              photoUrls: deleteTarget.photo_urls,
             })
           } finally {
             setDeleteTarget(null)

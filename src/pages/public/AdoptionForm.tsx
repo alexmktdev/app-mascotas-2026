@@ -9,18 +9,15 @@ import { useParams, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { adoptionPublicFormSchema, type AdoptionPublicFormData } from '@/lib/validations'
-import { z } from 'zod'
 import { usePetDetail } from '@/hooks/usePets'
 import { useCreateAdoptionRequest } from '@/hooks/useAdoptions'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { HOUSING_TYPE_LABELS, SUBMIT_COOLDOWN_MS, MIN_FORM_FILL_TIME_MS } from '@/constants'
 import { CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react'
-import type { FormStatus } from '@/types'
-import type { AdoptionRequestInsert } from '@/types'
+import type { FormStatus } from '@/types/firebase.types'
+import type { AdoptionRequestInsert } from '@/types/firebase.types'
 import toast from 'react-hot-toast'
-
-const routePetIdSchema = z.string().uuid('ID de mascota inválido')
 
 export default function AdoptionForm() {
   const { petId } = useParams<{ petId: string }>()
@@ -30,7 +27,6 @@ export default function AdoptionForm() {
   const [isOnCooldown, setIsOnCooldown] = useState(false)
   const formStartTime = useRef(Date.now())
 
-  /** Misma layout que el detalle: el scroll del documento se conserva al cambiar de ruta. */
   useLayoutEffect(() => {
     window.scrollTo(0, 0)
   }, [petId])
@@ -48,9 +44,8 @@ export default function AdoptionForm() {
   })
 
   const onSubmit = async (data: AdoptionPublicFormData) => {
-    const idParsed = routePetIdSchema.safeParse(petId)
-    if (!idParsed.success) {
-      toast.error('Enlace inválido. Abre el formulario con el botón «Adoptar» en la ficha de la mascota.')
+    if (!petId) {
+      toast.error('ID de mascota no encontrado. Usa el botón "Adoptar" desde la ficha de la mascota.')
       return
     }
 
@@ -72,7 +67,7 @@ export default function AdoptionForm() {
     try {
       const { _honeypot, ...rest } = data
       const payload: AdoptionRequestInsert = {
-        pet_id: idParsed.data,
+        pet_id: petId,
         full_name: rest.full_name.trim(),
         email: rest.email.trim(),
         phone: rest.phone.trim(),
@@ -102,7 +97,6 @@ export default function AdoptionForm() {
   const labelClasses = 'mb-1 block text-sm font-medium text-surface-700'
   const errorClasses = 'mt-1 text-xs text-rose-500'
 
-  // Página de éxito
   if (formStatus === 'success') {
     return (
       <div className="mx-auto max-w-lg py-16 text-center animate-scale-in">
@@ -137,7 +131,6 @@ export default function AdoptionForm() {
 
   return (
     <div className="mx-auto max-w-2xl animate-fade-in">
-      {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-2 text-sm text-surface-500">
         <Link to="/" className="hover:text-primary-600 transition-colors">Inicio</Link>
         <ChevronRight className="h-4 w-4" />
@@ -176,13 +169,11 @@ export default function AdoptionForm() {
         })}
         className="relative space-y-6"
       >
-        {/* Honeypot (oculto para bots) */}
         <div className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0" aria-hidden="true">
           <label htmlFor="adopt-hp">Company</label>
           <input id="adopt-hp" {...register('_honeypot')} tabIndex={-1} autoComplete="off" />
         </div>
 
-        {/* Datos personales */}
         <fieldset className="space-y-4 rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
           <legend className="px-2 text-sm font-bold text-surface-800">Datos personales</legend>
 
@@ -210,7 +201,6 @@ export default function AdoptionForm() {
           </div>
         </fieldset>
 
-        {/* Dirección */}
         <fieldset className="space-y-4 rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
           <legend className="px-2 text-sm font-bold text-surface-800">Dirección</legend>
 
@@ -243,7 +233,6 @@ export default function AdoptionForm() {
           </label>
         </fieldset>
 
-        {/* Mascotas y niños */}
         <fieldset className="space-y-4 rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
           <legend className="px-2 text-sm font-bold text-surface-800">Hogar</legend>
 
@@ -266,7 +255,6 @@ export default function AdoptionForm() {
           </div>
         </fieldset>
 
-        {/* Motivación */}
         <fieldset className="space-y-4 rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
           <legend className="px-2 text-sm font-bold text-surface-800">Motivación</legend>
 

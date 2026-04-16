@@ -1,20 +1,20 @@
 /**
  * Página: Editar mascota.
- * Orquestador: coordina PetForm + PetPhotoUploader + API.
+ * Lectura → Firestore directo.
+ * Escritura → Cloud Functions (solo admins).
  */
 
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchPetDetail } from '@/api/pets'
+import { fetchPetDetail } from '@/api/pets-firebase'
 import { useUpdatePet } from '@/hooks/usePets'
-import { useAuth } from '@/hooks/useAuth'
 import { usePetPhotoManager } from '@/hooks/usePetPhotoManager'
 import { PetForm } from '@/components/pets/PetForm'
 import { PetPhotoUploader } from '@/components/pets/PetPhotoUploader'
-import { transformPetFieldsToUpdate } from '@/lib/petTransform'
 import { Skeleton } from '@/components/ui/Skeleton'
 import type { PetFormFields } from '@/lib/validations'
-import type { Pet } from '@/types'
+import type { Pet } from '@/types/firebase.types'
+import { useAuth } from '@/hooks/useAuth'
 
 function petToFormFields(pet: Pet): PetFormFields {
   return {
@@ -44,6 +44,7 @@ function petToFormFields(pet: Pet): PetFormFields {
 export default function EditPet() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const { data: pet, isLoading } = useQuery({
     queryKey: ['pet', id],
@@ -54,21 +55,55 @@ export default function EditPet() {
   })
 
   const updatePet = useUpdatePet()
-  const { user } = useAuth()
 
   const photoManager = usePetPhotoManager({
-    userId: user?.id ?? '',
+    petId: id ?? '__unknown__',
     existingUrls: pet?.photo_urls ?? [],
   })
 
   const handleSubmit = async (data: PetFormFields) => {
-    if (!id || !pet) return
-
-    const hasNew = photoManager.photoEntries.some((e) => e.kind === 'new')
+    if (!id) return
 
     try {
-      const photo_urls = hasNew ? await photoManager.uploadAll() : []
-      const updates = transformPetFieldsToUpdate(data, user?.id ?? null, photo_urls)
+      // Subir fotos nuevas antes de actualizar (si hay nuevas)
+      let updatedPhotoUrls: string[] | undefined
+      if (photoManager.photoEntries.some((e) => e.kind === 'new')) {
+        updatedPhotoUrls = await photoManager.uploadAll()
+      }
+
+      const updates: Record<string, unknown> = {
+        name: data.name,
+        species: data.species,
+        breed: data.breed ?? null,
+        age_months: data.age_months,
+        gender: data.gender,
+        size: data.size ?? null,
+        color: data.color ?? null,
+        contact_phone: data.contact_phone ?? null,
+        weight_kg: data.weight_kg ?? null,
+        sterilized: data.sterilized,
+        vaccinated: data.vaccinated,
+        dewormed: data.dewormed,
+        microchip: data.microchip,
+        health_notes: data.health_notes ?? null,
+        personality: data.personality ?? null,
+        story: data.story ?? null,
+        good_with_kids: pet?.good_with_kids ?? null,
+        good_with_dogs: pet?.good_with_dogs ?? null,
+        good_with_cats: pet?.good_with_cats ?? null,
+        special_needs: data.special_needs ?? null,
+        status: data.status,
+        intake_date: data.intake_date,
+        drive_folder_id: data.drive_folder_id ?? null,
+        updated_by: user?.uid ?? null,
+      }
+
+      if (updatedPhotoUrls !== undefined) {
+        // Merge fotos existentes + nuevas
+        const existing = pet?.photo_urls ?? []
+        updates.photo_urls = [...existing, ...updatedPhotoUrls]
+      }
+
       await updatePet.mutateAsync({ id, updates })
       navigate('/admin/pets')
     } catch (error) {
@@ -96,42 +131,24 @@ export default function EditPet() {
 
       <PetForm
         mode="edit"
-        defaultValues={pet ? petToFormFields(pet) : buildCreateDefaults()}
+        defaultValues={pet ? petToFormFields(pet) : {
+          name: '', species: 'dog', breed: '', age_months: 1, gender: 'male',
+          size: undefined, color: '', contact_phone: '+56', weight_kg: undefined,
+          sterilized: false, vaccinated: false, dewormed: false, microchip: false,
+          health_notes: '', personality: '', story: '', special_needs: '',
+          status: 'available', drive_folder_id: '', intake_date: '',
+        }}
         onSubmit={handleSubmit}
         isSubmitting={updatePet.isPending || photoManager.isUploading}
-      />
-
-      <PetPhotoUploader
-        photoEntries={photoManager.photoEntries}
-        addPhoto={photoManager.addPhoto}
-        removePhoto={photoManager.removePhoto}
-        isUploading={photoManager.isUploading}
+        beforeSubmit={
+          <PetPhotoUploader
+            photoEntries={photoManager.photoEntries}
+            addPhoto={photoManager.addPhoto}
+            removePhoto={photoManager.removePhoto}
+            isUploading={photoManager.isUploading}
+          />
+        }
       />
     </div>
   )
-}
-
-function buildCreateDefaults(): PetFormFields {
-  return {
-    name: '',
-    species: 'dog',
-    breed: '',
-    age_months: 1,
-    gender: 'male',
-    size: undefined,
-    color: '',
-    contact_phone: '+56',
-    weight_kg: undefined,
-    sterilized: false,
-    vaccinated: false,
-    dewormed: false,
-    microchip: false,
-    health_notes: '',
-    personality: '',
-    story: '',
-    special_needs: '',
-    status: 'available',
-    drive_folder_id: '',
-    intake_date: '',
-  }
 }

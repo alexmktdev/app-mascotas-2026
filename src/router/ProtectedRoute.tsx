@@ -7,17 +7,16 @@
 
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import type { UserRole } from '@/types'
+import type { Profile } from '@/types/firebase.types'
 import { Skeleton } from '@/components/ui/Skeleton'
 
 interface ProtectedRouteProps {
-  allowedRoles?: UserRole[]
+  allowedRoles?: Profile['role'][]
 }
 
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, isInitialized, profile } = useAuth()
 
-  // Mientras se restaura la sesión: skeleton
   if (!isInitialized || isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-50">
@@ -30,12 +29,10 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     )
   }
 
-  // Sin sesión: redirect a login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
-  // Verificar rol: sin perfil no se puede autorizar (evita bypass si falla la carga del perfil)
   if (allowedRoles?.length) {
     if (!profile) {
       return <Navigate to="/unauthorized" replace />

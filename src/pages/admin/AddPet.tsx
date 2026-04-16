@@ -1,6 +1,6 @@
 /**
  * Página: Agregar mascota.
- * Orquestador: coordina PetForm + PetPhotoUploader + API.
+ * Flujo: 1) Crear mascota sin fotos → 2) Subir fotos → 3) Ir a lista.
  */
 
 import { useNavigate } from 'react-router-dom'
@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { usePetPhotoManager } from '@/hooks/usePetPhotoManager'
 import { PetForm } from '@/components/pets/PetForm'
 import { PetPhotoUploader } from '@/components/pets/PetPhotoUploader'
-import { buildCreateDefaults, transformPetFieldsToInsert } from '@/lib/petTransform'
+import { buildCreateDefaults } from '@/lib/petTransform'
 import type { PetFormFields } from '@/lib/validations'
 import toast from 'react-hot-toast'
 
@@ -18,20 +18,47 @@ export default function AddPet() {
   const createPet = useCreatePet()
   const { user } = useAuth()
 
-  const photoManager = usePetPhotoManager({ userId: user?.id ?? '' })
+  const photoManager = usePetPhotoManager({
+    petId: '',
+    existingUrls: [],
+  })
 
   const handleSubmit = async (data: PetFormFields) => {
-    const hasNew = photoManager.photoEntries.some((e) => e.kind === 'new')
-
-    if (hasNew && !user?.id) {
-      toast.error('Debes iniciar sesión para subir fotos')
-      return
-    }
-
     try {
-      const photo_urls = hasNew ? await photoManager.uploadAll() : []
-      const petData = transformPetFieldsToInsert(data, user?.id ?? null, photo_urls)
-      await createPet.mutateAsync(petData)
+      // 1. Crear la mascota (sin fotos)
+      const result = await createPet.mutateAsync({
+        name: data.name,
+        species: data.species,
+        breed: data.breed ?? null,
+        age_months: data.age_months,
+        gender: data.gender,
+        size: data.size ?? null,
+        color: data.color ?? null,
+        contact_phone: data.contact_phone ?? null,
+        weight_kg: data.weight_kg ?? null,
+        sterilized: data.sterilized ?? false,
+        vaccinated: data.vaccinated ?? false,
+        dewormed: data.dewormed ?? false,
+        microchip: data.microchip ?? false,
+        health_notes: data.health_notes ?? null,
+        personality: data.personality ?? null,
+        story: data.story ?? null,
+        special_needs: data.special_needs ?? null,
+      })
+
+      const newPetId = (result as { id: string }).id
+
+      // 2. Subir fotos si hay nuevas (después de tener el petId real)
+      if (photoManager.photoEntries.some((e) => e.kind === 'new')) {
+        if (!user?.uid) {
+          toast.error('Debes iniciar sesión para subir fotos')
+          navigate('/admin/pets')
+          return
+        }
+        // Esperar a que terminen las fotos antes de navegar
+        await photoManager.uploadAll(newPetId)
+      }
+
       navigate('/admin/pets')
     } catch (error) {
       throw error
@@ -50,13 +77,14 @@ export default function AddPet() {
         defaultValues={buildCreateDefaults()}
         onSubmit={handleSubmit}
         isSubmitting={createPet.isPending || photoManager.isUploading}
-      />
-
-      <PetPhotoUploader
-        photoEntries={photoManager.photoEntries}
-        addPhoto={photoManager.addPhoto}
-        removePhoto={photoManager.removePhoto}
-        isUploading={photoManager.isUploading}
+        beforeSubmit={
+          <PetPhotoUploader
+            photoEntries={photoManager.photoEntries}
+            addPhoto={photoManager.addPhoto}
+            removePhoto={photoManager.removePhoto}
+            isUploading={photoManager.isUploading}
+          />
+        }
       />
     </div>
   )

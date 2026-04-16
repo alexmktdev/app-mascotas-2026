@@ -13,7 +13,7 @@ import { SPECIES_LABELS, PET_STATUS_LABELS, PET_STATUS_ADMIN_TABLE, SPECIES_EMOJ
 import { formatAge, formatDate } from '@/utils'
 import { PetPhotoImage } from '@/components/pets/PetPhotoImage'
 import { Pencil, Trash2, PlusCircle } from 'lucide-react'
-import type { Pet } from '@/types'
+import type { Pet } from '@/types/firebase.types'
 
 export default function PetsList() {
   const navigate = useNavigate()
@@ -32,7 +32,6 @@ export default function PetsList() {
     try {
       await deletePet.mutateAsync({
         id: deleteTarget.id,
-        photoUrls: deleteTarget.photo_urls,
       })
     } catch {
       // Toast en useDeletePet

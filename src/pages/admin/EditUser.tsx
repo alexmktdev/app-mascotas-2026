@@ -7,7 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { editUserSchema, type EditUserFormData } from '@/lib/validations'
-import { useUser, useAdminUpdateUser } from '@/hooks/useUsers'
+import { useUser, useUpdateUser } from '@/hooks/useUsers'
 import { Button } from '@/components/ui/Button'
 import { ROLE_LABELS } from '@/constants'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -16,7 +16,7 @@ export default function EditUser() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: user, isLoading, isError } = useUser(id)
-  const updateUser = useAdminUpdateUser()
+  const updateUser = useUpdateUser()
 
   const {
     register,
@@ -45,13 +45,14 @@ export default function EditUser() {
     if (!id) return
     try {
       await updateUser.mutateAsync({
-        user_id: id,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        email: data.email,
-        role: data.role,
-        is_active: data.is_active,
-        password: data.password?.trim() || undefined,
+        id,
+        updates: {
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email,
+          role: data.role,
+          is_active: data.is_active,
+        },
       })
       navigate('/admin/users')
     } catch {

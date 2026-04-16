@@ -12,7 +12,7 @@ import { ROLE_LABELS } from '@/constants'
 import { formatDate } from '@/utils'
 import { Link, useNavigate } from 'react-router-dom'
 import { UserPlus, ToggleLeft, ToggleRight, Pencil, Trash2 } from 'lucide-react'
-import type { Profile } from '@/types'
+import type { Profile } from '@/types/firebase.types'
 
 export default function UsersList() {
   const navigate = useNavigate()
@@ -85,7 +85,7 @@ export default function UsersList() {
       key: 'actions',
       header: 'Acciones',
       render: (u) => {
-        const isSelf = authUser?.id === u.id
+        const isSelf = authUser?.uid === u.id
         return (
           <div className="flex items-center gap-1">
             <Link
@@ -116,7 +116,7 @@ export default function UsersList() {
         )
       },
     },
-  ], [authUser?.id, deleteUser.isPending, handleToggleActive, handleDelete])
+  ], [authUser?.uid, deleteUser.isPending, handleToggleActive, handleDelete])
 
   return (
     <div className="space-y-6 animate-fade-in">

@@ -17,6 +17,7 @@ interface PetFormProps {
   defaultValues: PetFormFields
   onSubmit: (data: PetFormFields) => void | Promise<void>
   isSubmitting?: boolean
+  beforeSubmit?: React.ReactNode
 }
 
 export const PetForm = memo(function PetForm({
@@ -24,6 +25,7 @@ export const PetForm = memo(function PetForm({
   defaultValues,
   onSubmit,
   isSubmitting = false,
+  beforeSubmit,
 }: PetFormProps) {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
 
@@ -232,6 +234,7 @@ export const PetForm = memo(function PetForm({
       )}
 
       {/* Submit */}
+      {beforeSubmit}
       <div className="flex justify-end gap-3">
         <Button
           type="submit"

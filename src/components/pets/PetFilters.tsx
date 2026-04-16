@@ -11,7 +11,7 @@ import {
   DOG_BREEDS,
   CAT_BREEDS,
 } from '@/constants'
-import type { PetFilters as PetFiltersType } from '@/types'
+import type { PetFilters as PetFiltersType } from '@/types/firebase.types'
 
 interface PetFiltersProps {
   onFiltersChange: (filters: PetFiltersType) => void

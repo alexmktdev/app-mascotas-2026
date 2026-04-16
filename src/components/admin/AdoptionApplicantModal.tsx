@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { HOUSING_TYPE_LABELS, ADOPTION_STATUS_LABELS } from '@/constants'
 import { formatRelativeDate } from '@/utils'
-import type { AdoptionRequestAdminRow } from '@/types'
+import type { AdminAdoptionRow } from '@/types/firebase.types'
 import { X } from 'lucide-react'
 
 function boolEs(v: boolean | null | undefined): string {
@@ -15,7 +15,7 @@ function boolEs(v: boolean | null | undefined): string {
   return 'No indicado'
 }
 
-function housingLabel(v: AdoptionRequestAdminRow['housing_type']): string {
+function housingLabel(v: AdminAdoptionRow['housing_type']): string {
   if (!v) return '—'
   return HOUSING_TYPE_LABELS[v] ?? v
 }
@@ -42,7 +42,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 interface AdoptionApplicantModalProps {
-  request: AdoptionRequestAdminRow
+  request: AdminAdoptionRow
   onClose: () => void
 }
 

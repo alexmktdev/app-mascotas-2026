@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DENY ALL WRITES — Solo Cloud Functions pueden escribir.
+    // Las reglas de arriba son defensa en profundidad; TODO el auth real
+    // sucede en las Cloud Functions.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /{path=**}/** {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PETS — Lectura PÚBLICA (página de adopción). No requiere auth.
+    // ═══════════════════════════════════════════════════════════════════════
+    match /pets/{petId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AUDIT_LOG — Solo lectura para admins (Cloud Functions escriben).
+    // ═══════════════════════════════════════════════════════════════════════
+    match /audit_log/{logId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

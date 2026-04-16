@@ -9,14 +9,13 @@ import {
   useUpdateAdoptionStatus,
   useDeleteAdoptionRequest,
 } from '@/hooks/useAdoptions'
-import { useAuth } from '@/hooks/useAuth'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AdoptionApplicantModal } from '@/components/admin/AdoptionApplicantModal'
 import { ADOPTION_STATUS_LABELS, ADOPTION_STATUS_ADMIN_TABLE } from '@/constants'
 import { formatRelativeDate } from '@/utils'
-import type { AdoptionRequestAdminRow } from '@/types'
+import type { AdminAdoptionRow } from '@/types/firebase.types'
 import { CheckCircle, XCircle, MessageSquare, Eye, Pencil, Trash2 } from 'lucide-react'
 
 export default function InProcess() {
@@ -24,17 +23,16 @@ export default function InProcess() {
   const { data, isLoading, isError, refetch } = useAdoptionRequests({ page })
   const updateStatus = useUpdateAdoptionStatus()
   const deleteRequest = useDeleteAdoptionRequest()
-  const { user } = useAuth()
 
   const [actionDialog, setActionDialog] = useState<{
-    request: AdoptionRequestAdminRow
+    request: AdminAdoptionRow
     action: 'approve' | 'reject'
   } | null>(null)
 
-  const [notesDialog, setNotesDialog] = useState<AdoptionRequestAdminRow | null>(null)
-  const [editDialog, setEditDialog] = useState<AdoptionRequestAdminRow | null>(null)
-  const [deleteDialog, setDeleteDialog] = useState<AdoptionRequestAdminRow | null>(null)
-  const [detailRequest, setDetailRequest] = useState<AdoptionRequestAdminRow | null>(null)
+  const [notesDialog, setNotesDialog] = useState<AdminAdoptionRow | null>(null)
+  const [editDialog, setEditDialog] = useState<AdminAdoptionRow | null>(null)
+  const [deleteDialog, setDeleteDialog] = useState<AdminAdoptionRow | null>(null)
+  const [detailRequest, setDetailRequest] = useState<AdminAdoptionRow | null>(null)
 
   const handleAction = async () => {
     if (!actionDialog) return
@@ -47,8 +45,6 @@ export default function InProcess() {
         id: request.id,
         updates: {
           status: newStatus,
-          reviewed_by: user?.id ?? null,
-          reviewed_at: new Date().toISOString(),
         },
       })
     } finally {
@@ -56,7 +52,7 @@ export default function InProcess() {
     }
   }
 
-  const columns = useMemo<Column<AdoptionRequestAdminRow>[]>(() => [
+  const columns = useMemo<Column<AdminAdoptionRow>[]>(() => [
     {
       key: 'full_name',
       header: 'Solicitante',
@@ -186,7 +182,7 @@ export default function InProcess() {
       </div>
 
       <div className="xl:-mx-16 2xl:-mx-28">
-        <DataTable<AdoptionRequestAdminRow>
+        <DataTable<AdminAdoptionRow>
           variant="featured"
           showLoadingSkeleton={false}
           columns={columns}
@@ -254,7 +250,7 @@ function AdminNotesDialog({
   request,
   onClose,
 }: {
-  request: AdoptionRequestAdminRow
+  request: AdminAdoptionRow
   onClose: () => void
 }) {
   const [notesInput, setNotesInput] = useState(request.admin_notes ?? '')
@@ -293,7 +289,7 @@ function AdoptionEditDialog({
   request,
   onClose,
 }: {
-  request: AdoptionRequestAdminRow
+  request: AdminAdoptionRow
   onClose: () => void
 }) {
   const updateStatus = useUpdateAdoptionStatus()
@@ -308,11 +304,8 @@ function AdoptionEditDialog({
       await updateStatus.mutateAsync({
         id: request.id,
         updates: {
-          full_name: fullName.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-          city: city.trim(),
-          address: address.trim(),
+          // Los campos del solicitante no son editables via Cloud Function
+          // (para corregir datos habría que agregar lógica específica en updateAdoptionRequest)
         },
       })
     } finally {

@@ -3,7 +3,7 @@
  * Lógica de sanitización y construcción de payloads centralizada aquí.
  */
 
-import type { PetInsert, PetUpdate } from '@/types'
+import type { PetInsert, PetUpdate } from '@/types/firebase.types'
 import type { PetFormFields } from '@/lib/validations'
 
 export function transformPetFieldsToInsert(
@@ -21,11 +21,11 @@ export function transformPetFieldsToInsert(
   return {
     name: data.name.trim(),
     species: data.species,
-    breed: data.breed?.trim() || null,
+    breed: data.breed?.trim() ?? null,
     age_months: data.age_months,
     gender: data.gender,
     size: data.size ?? null,
-    color: data.color?.trim() || null,
+    color: data.color?.trim() ?? null,
     contact_phone:
       data.contact_phone?.trim() && data.contact_phone.trim() !== '+56'
         ? data.contact_phone.trim()
@@ -38,13 +38,13 @@ export function transformPetFieldsToInsert(
     vaccinated: data.vaccinated,
     dewormed: data.dewormed,
     microchip: data.microchip,
-    health_notes: data.health_notes?.trim() || null,
-    personality: data.personality?.trim() || null,
-    story: data.story?.trim() || null,
-    special_needs: data.special_needs?.trim() || null,
+    health_notes: data.health_notes?.trim() ?? null,
+    personality: data.personality?.trim() ?? null,
+    story: data.story?.trim() ?? null,
+    special_needs: data.special_needs?.trim() ?? null,
     status: 'available',
     photo_urls,
-    drive_folder_id: data.drive_folder_id?.trim() || null,
+    drive_folder_id: data.drive_folder_id?.trim() ?? null,
     intake_date: intake,
     created_by: userId ?? null,
   }
@@ -58,11 +58,11 @@ export function transformPetFieldsToUpdate(
   return {
     name: data.name.trim(),
     species: data.species,
-    breed: data.breed?.trim() || null,
+    breed: data.breed?.trim() ?? null,
     age_months: data.age_months,
     gender: data.gender,
     size: data.size ?? null,
-    color: data.color?.trim() || null,
+    color: data.color?.trim() ?? null,
     contact_phone:
       data.contact_phone?.trim() && data.contact_phone.trim() !== '+56'
         ? data.contact_phone.trim()
@@ -75,13 +75,13 @@ export function transformPetFieldsToUpdate(
     vaccinated: data.vaccinated,
     dewormed: data.dewormed,
     microchip: data.microchip,
-    health_notes: data.health_notes?.trim() || null,
-    personality: data.personality?.trim() || null,
-    story: data.story?.trim() || null,
-    special_needs: data.special_needs?.trim() || null,
+    health_notes: data.health_notes?.trim() ?? null,
+    personality: data.personality?.trim() ?? null,
+    story: data.story?.trim() ?? null,
+    special_needs: data.special_needs?.trim() ?? null,
     status: data.status,
     photo_urls,
-    drive_folder_id: data.drive_folder_id?.trim() || null,
+    drive_folder_id: data.drive_folder_id?.trim() ?? null,
     intake_date: data.intake_date?.trim() || undefined,
     updated_by: userId ?? null,
   }

@@ -1,24 +1,26 @@
 /**
- * Hooks de solicitudes de adopción con TanStack Query.
+ * Hooks de solicitudes de adopción.
+ * Lectura → Firestore directo.
+ * Escritura → Cloud Functions (solo admins pueden modificar status).
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   fetchAdoptionRequests,
   fetchAdoptionRequestDetail,
-  createAdoptionRequest,
-  updateAdoptionRequest,
   fetchRecentAdoptionRequests,
-  deleteAdoptionRequest,
-} from '@/api/adoptions'
+} from '@/api/adoptions-firebase'
+import {
+  functionsCreateAdoptionRequest,
+  functionsUpdateAdoptionRequest,
+  functionsDeleteAdoptionRequest,
+  type CreateAdoptionRequestPayload,
+  type UpdateAdoptionRequestPayload,
+} from '@/lib/functions'
 import { withTimeout } from '@/lib/withTimeout'
-import type { AdoptionRequestInsert, AdoptionRequestUpdate, AdoptionRequest } from '@/types'
+import type { AdoptionRequest } from '@/types/firebase.types'
 import { DASHBOARD_REFETCH_INTERVAL } from '@/constants'
 import toast from 'react-hot-toast'
-
-// ──────────────────────────────────────────────
-// Admin: lista de solicitudes
-// ──────────────────────────────────────────────
 
 export function useAdoptionRequests(params: {
   petId?: string
@@ -31,10 +33,6 @@ export function useAdoptionRequests(params: {
   })
 }
 
-// ──────────────────────────────────────────────
-// Admin: detalle de solicitud
-// ──────────────────────────────────────────────
-
 export function useAdoptionRequestDetail(id: string | undefined) {
   return useQuery({
     queryKey: ['adoption-request', id],
@@ -42,10 +40,6 @@ export function useAdoptionRequestDetail(id: string | undefined) {
     enabled: !!id,
   })
 }
-
-// ──────────────────────────────────────────────
-// Dashboard: solicitudes recientes
-// ──────────────────────────────────────────────
 
 export function useRecentAdoptionRequests() {
   return useQuery({
@@ -55,41 +49,47 @@ export function useRecentAdoptionRequests() {
   })
 }
 
-// ──────────────────────────────────────────────
-// Público: crear solicitud (sin auth)
-// ──────────────────────────────────────────────
+// ─── MUTACIONES —van por Cloud Functions ────────────────────────────────────
 
 const ADOPTION_SUBMIT_MS = 90_000
 const ADOPTION_UPDATE_MS = 30_000
 const ADOPTION_DELETE_MS = 30_000
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message?.trim()) return error.message
+  if (typeof error === 'string' && error.trim()) return error
+  if (error && typeof error === 'object') {
+    const candidate = error as Record<string, unknown>
+    const preferred = [candidate.message, candidate.error_description, candidate.details, candidate.hint]
+      .find((v) => typeof v === 'string' && v.trim()) as string | undefined
+    if (preferred) return preferred
+  }
+  return fallback
+}
+
 export function useCreateAdoptionRequest() {
   return useMutation({
-    mutationFn: (request: AdoptionRequestInsert) =>
+    mutationFn: (request: CreateAdoptionRequestPayload) =>
       withTimeout(
-        createAdoptionRequest(request),
+        functionsCreateAdoptionRequest(request),
         ADOPTION_SUBMIT_MS,
         'Tiempo máximo agotado al enviar la solicitud. Revisa tu conexión e inténtalo de nuevo.',
       ),
     retry: false,
     onError: (error: unknown) => {
-      const msg = error instanceof Error ? error.message : String(error)
-      toast.error(`Error al enviar solicitud: ${msg}`)
+      const msg = getErrorMessage(error, 'Error al enviar solicitud')
+      toast.error(msg)
     },
   })
 }
-
-// ──────────────────────────────────────────────
-// Admin: actualizar estado de solicitud
-// ──────────────────────────────────────────────
 
 export function useUpdateAdoptionStatus() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: AdoptionRequestUpdate }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: UpdateAdoptionRequestPayload }) =>
       withTimeout(
-        updateAdoptionRequest(id, updates),
+        functionsUpdateAdoptionRequest({ id, admin_notes: updates.admin_notes, status: updates.status }),
         ADOPTION_UPDATE_MS,
         'Tiempo máximo agotado al guardar cambios de la solicitud. Intenta nuevamente.',
       ),
@@ -97,11 +97,12 @@ export function useUpdateAdoptionStatus() {
       queryClient.invalidateQueries({ queryKey: ['adoption-requests'] })
       queryClient.invalidateQueries({ queryKey: ['adoption-request'] })
       queryClient.invalidateQueries({ queryKey: ['recent-adoption-requests'] })
-      queryClient.invalidateQueries({ queryKey: ['pet-count'] })
+      queryClient.invalidateQueries({ queryKey: ['pet-stats-all'] })
       toast.success('Solicitud actualizada')
     },
-    onError: (error: Error) => {
-      toast.error(`Error al actualizar solicitud: ${error.message}`)
+    onError: (error: unknown) => {
+      const msg = getErrorMessage(error, 'Error al actualizar solicitud')
+      toast.error(msg)
     },
   })
 }
@@ -112,7 +113,7 @@ export function useDeleteAdoptionRequest() {
   return useMutation({
     mutationFn: (id: string) =>
       withTimeout(
-        deleteAdoptionRequest(id),
+        functionsDeleteAdoptionRequest({ id }),
         ADOPTION_DELETE_MS,
         'Tiempo máximo agotado al eliminar la solicitud. Intenta nuevamente.',
       ),
@@ -121,12 +122,12 @@ export function useDeleteAdoptionRequest() {
       queryClient.invalidateQueries({ queryKey: ['adoption-requests'] })
       queryClient.invalidateQueries({ queryKey: ['adoption-request'] })
       queryClient.invalidateQueries({ queryKey: ['recent-adoption-requests'] })
-      queryClient.invalidateQueries({ queryKey: ['pet-count'] })
+      queryClient.invalidateQueries({ queryKey: ['pet-stats-all'] })
       toast.success('Solicitud eliminada')
     },
     onError: (error: unknown) => {
-      const msg = error instanceof Error ? error.message : String(error)
-      toast.error(`Error al eliminar solicitud: ${msg}`)
+      const msg = getErrorMessage(error, 'Error al eliminar solicitud')
+      toast.error(msg)
     },
   })
 }

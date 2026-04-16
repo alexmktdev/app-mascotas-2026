@@ -6,7 +6,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { Syringe, Scissors, ArrowRight } from 'lucide-react'
-import type { PetCardData } from '@/types'
+import type { PetCardData } from '@/types/firebase.types'
 import { formatAge } from '@/utils'
 import {
   SPECIES_LABELS,
@@ -26,7 +26,7 @@ interface PetCardProps {
 
 function PetCardInner({ pet, index }: PetCardProps) {
   return (
-    <article className="group overflow-hidden rounded-2xl border border-surface-200/60 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/5 hover:-translate-y-1 animate-fade-in">
+    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-surface-200/60 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary-500/5 animate-fade-in">
       {/* Slider de fotos + estado */}
       <div className="relative">
         <span
@@ -45,7 +45,7 @@ function PetCardInner({ pet, index }: PetCardProps) {
       </div>
 
       {/* Info */}
-      <div className="p-4">
+      <div className="flex flex-1 flex-col p-4">
         <div className="mb-2 flex items-start justify-between">
           <div>
             <Link to={`/pets/${pet.id}`} className="group/title">
@@ -94,7 +94,7 @@ function PetCardInner({ pet, index }: PetCardProps) {
         {/* CTA */}
         <Link
           to={`/pets/${pet.id}`}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary-500/20 transition-all hover:from-primary-600 hover:to-primary-700 hover:shadow-md"
+          className="mt-auto flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary-500/20 transition-all hover:from-primary-600 hover:to-primary-700 hover:shadow-md"
         >
           Ver más detalles
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />

@@ -12,12 +12,18 @@ import { PET_PHOTOS_BUCKET } from '@/constants'
 
 /** Formato relativo: "hace 3 días" */
 export function formatRelativeDate(dateStr: string): string {
-  return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: es })
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return '-'
+  return formatDistanceToNow(date, { addSuffix: true, locale: es })
 }
 
 /** Formato legible: "12 abr 2026" */
 export function formatDate(dateStr: string): string {
-  return format(new Date(dateStr), 'dd MMM yyyy', { locale: es })
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return '-'
+  return format(date, 'dd MMM yyyy', { locale: es })
 }
 
 /** Formato completo: "12 de abril de 2026, 14:30" */

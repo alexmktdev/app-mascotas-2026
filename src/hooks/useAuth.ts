@@ -6,7 +6,6 @@ import { useAuthStore } from '@/store/authStore'
 
 export function useAuth() {
   const {
-    session,
     user,
     profile,
     isLoading,
@@ -16,12 +15,11 @@ export function useAuth() {
   } = useAuthStore()
 
   return {
-    session,
     user,
     profile,
     isLoading,
     isInitialized,
-    isAuthenticated: !!session,
+    isAuthenticated: !!user,
     isAdmin: profile?.role === 'admin',
     isStaff: profile?.role === 'staff',
     login,

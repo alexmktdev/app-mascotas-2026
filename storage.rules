@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PET-PHOTOS
+    // Lectura: PÚBLICA (todos pueden ver fotos — página de adopción)
+    // Escritura: DENEGADA para todos.
+    //
+    // NOTA: Las cargas reales de fotos las hace el Admin SDK de Cloud
+    // Functions directamente (storage.bucket().file().save()), que
+    // BYPASSA completamente las Storage Rules. Las reglas aquí son solo
+    // defensa en profundidad para evitar escrituras desde el SDK web.
+    // ═══════════════════════════════════════════════════════════════════════
+    match /pet-photos/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Denegar TODO lo demás
+    match /{everythingElse=**} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}

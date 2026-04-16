@@ -1,10 +1,10 @@
 /**
  * Hook para gestionar fotos de mascotas.
- * Maneja entries locales/nuevas y sube a Storage cuando se requiere.
+ * Toda escritura va por Cloud Functions (solo admins pueden subir/eliminar).
  */
 
-import { useCallback, useState } from 'react'
-import { uploadPetPhoto } from '@/api/petPhotosStorage'
+import { useCallback, useState, useEffect } from 'react'
+import { functionsUploadPetPhoto } from '@/lib/functions'
 import {
   PET_PHOTO_MAX_BYTES,
   PET_PHOTO_MAX_SIZE_LABEL_ES,
@@ -17,7 +17,7 @@ export type PhotoEntry =
   | { kind: 'new'; file: File; localId: string }
 
 interface UsePetPhotoManagerOptions {
-  userId: string
+  petId: string
   existingUrls?: string[]
 }
 
@@ -26,14 +26,15 @@ interface UsePetPhotoManagerReturn {
   addPhoto: (file: File) => boolean
   removePhoto: (index: number) => void
   isUploading: boolean
-  uploadAll: () => Promise<string[]>
+  uploadAll: (petIdOverride?: string) => Promise<string[]>
   clearNew: () => void
 }
 
 const allowedMime = new Set<string>(PET_PHOTO_MIME_TYPES)
+const MAX_PHOTOS = 5
 
 export function usePetPhotoManager({
-  userId,
+  petId,
   existingUrls = [],
 }: UsePetPhotoManagerOptions): UsePetPhotoManagerReturn {
   const [photoEntries, setPhotoEntries] = useState<PhotoEntry[]>(() =>
@@ -41,10 +42,20 @@ export function usePetPhotoManager({
   )
   const [isUploading, setIsUploading] = useState(false)
 
+  useEffect(() => {
+    if (existingUrls.length > 0) {
+      setPhotoEntries((prev) => {
+        const existingOnServer = existingUrls.map((url) => ({ kind: 'existing' as const, url }) as PhotoEntry)
+        const newOnes = prev.filter((e) => e.kind === 'new')
+        return [...existingOnServer, ...newOnes]
+      })
+    }
+  }, [existingUrls])
+
   const addPhoto = useCallback(
     (file: File): boolean => {
-      if (photoEntries.length >= 2) {
-        toast.error('Máximo 2 fotos por mascota')
+      if (photoEntries.length >= MAX_PHOTOS) {
+        toast.error(`Máximo ${MAX_PHOTOS} fotos por mascota`)
         return false
       }
       if (file.size > PET_PHOTO_MAX_BYTES) {
@@ -61,7 +72,7 @@ export function usePetPhotoManager({
       ])
       return true
     },
-    [photoEntries.length],
+    [photoEntries],
   )
 
   const removePhoto = useCallback((index: number) => {
@@ -72,9 +83,10 @@ export function usePetPhotoManager({
     setPhotoEntries((prev) => prev.filter((e) => e.kind === 'existing'))
   }, [])
 
-  const uploadAll = useCallback(async (): Promise<string[]> => {
-    if (!userId) {
-      throw new Error('Debes iniciar sesión para subir fotos')
+  const uploadAll = useCallback(async (petIdOverride?: string): Promise<string[]> => {
+    const targetPetId = petIdOverride ?? petId
+    if (!targetPetId) {
+      throw new Error('ID de mascota requerido')
     }
 
     setIsUploading(true)
@@ -85,15 +97,20 @@ export function usePetPhotoManager({
         if (entry.kind === 'existing') {
           urls.push(entry.url)
         } else {
-          const uploadedUrl = await uploadPetPhoto(userId, entry.file)
-          urls.push(uploadedUrl)
+          // Convertir file a base64 y subir por Cloud Function
+          const base64 = await fileToBase64(entry.file)
+          const result = await functionsUploadPetPhoto({
+            petId: targetPetId,
+            photoDataUrl: base64,
+          })
+          urls.push(result.url)
         }
       }
       return urls
     } finally {
       setIsUploading(false)
     }
-  }, [photoEntries, userId])
+  }, [photoEntries, petId])
 
   return {
     photoEntries,
@@ -103,4 +120,13 @@ export function usePetPhotoManager({
     uploadAll,
     clearNew,
   }
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target?.result as string)
+    reader.onerror = () => reject(new Error('Error al leer el archivo'))
+    reader.readAsDataURL(file)
+  })
 }
