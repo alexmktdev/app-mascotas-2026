@@ -89,7 +89,11 @@ export function useUpdateAdoptionStatus() {
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: UpdateAdoptionRequestPayload }) =>
       withTimeout(
-        functionsUpdateAdoptionRequest({ id, admin_notes: updates.admin_notes, status: updates.status }),
+        functionsUpdateAdoptionRequest({
+          id,
+          ...(updates.admin_notes !== undefined ? { admin_notes: updates.admin_notes } : {}),
+          ...(updates.status !== undefined ? { status: updates.status } : {}),
+        }),
         ADOPTION_UPDATE_MS,
         'Tiempo máximo agotado al guardar cambios de la solicitud. Intenta nuevamente.',
       ),
