@@ -76,6 +76,19 @@ async function requireAdmin(auth) {
         throw new functions.https.HttpsError('permission-denied', 'Solo administradores pueden realizar esta acción');
     }
 }
+/** Mascotas y adopciones: admin o staff (alineado con rutas del panel). */
+async function requireStaffOrAdmin(auth) {
+    const profile = await getCallerProfile(auth);
+    if (!profile) {
+        throw new functions.https.HttpsError('not-found', 'Perfil no encontrado');
+    }
+    if (!profile.is_active) {
+        throw new functions.https.HttpsError('permission-denied', 'Usuario desactivado');
+    }
+    if (profile.role !== 'admin' && profile.role !== 'staff') {
+        throw new functions.https.HttpsError('permission-denied', 'Solo personal autorizado puede realizar esta acción');
+    }
+}
 function sanitizeText(s) {
     if (s == null)
         return null;
@@ -207,13 +220,13 @@ exports.deleteUser = regionalFunctions.https.onCall(async (data, context) => {
     return { success: true };
 });
 // ─────────────────────────────────────────────────────────────────────────────
-// PETS — solo admins pueden crear/editar/eliminar mascotas
+// PETS — admin o staff
 // ─────────────────────────────────────────────────────────────────────────────
 exports.createPet = regionalFunctions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión');
     }
-    await requireAdmin(context.auth);
+    await requireStaffOrAdmin(context.auth);
     const petData = data;
     // Validaciones de campos
     const name = sanitizeText(petData.name);
@@ -288,7 +301,7 @@ exports.updatePet = regionalFunctions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión');
     }
-    await requireAdmin(context.auth);
+    await requireStaffOrAdmin(context.auth);
     const { id, ...updates } = data;
     if (!id) {
         throw new functions.https.HttpsError('invalid-argument', 'ID de mascota es requerido');
@@ -397,7 +410,7 @@ exports.deletePet = regionalFunctions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión');
     }
-    await requireAdmin(context.auth);
+    await requireStaffOrAdmin(context.auth);
     const { id } = data;
     if (!id) {
         throw new functions.https.HttpsError('invalid-argument', 'ID de mascota es requerido');
@@ -505,7 +518,7 @@ exports.updateAdoptionRequest = regionalFunctions.https.onCall(async (data, cont
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión');
     }
-    await requireAdmin(context.auth);
+    await requireStaffOrAdmin(context.auth);
     const { id, admin_notes, status } = data;
     if (!id) {
         throw new functions.https.HttpsError('invalid-argument', 'ID de solicitud es requerido');
@@ -563,7 +576,7 @@ exports.deleteAdoptionRequest = regionalFunctions.https.onCall(async (data, cont
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión');
     }
-    await requireAdmin(context.auth);
+    await requireStaffOrAdmin(context.auth);
     const { id } = data;
     if (!id) {
         throw new functions.https.HttpsError('invalid-argument', 'ID de solicitud es requerido');
@@ -588,13 +601,13 @@ exports.deleteAdoptionRequest = regionalFunctions.https.onCall(async (data, cont
     return { success: true };
 });
 // ─────────────────────────────────────────────────────────────────────────────
-// STORAGE — solo admins pueden subir/eliminar fotos de mascotas
+// STORAGE — admin o staff
 // ─────────────────────────────────────────────────────────────────────────────
 exports.uploadPetPhoto = regionalFunctions.https.onCallHeavy(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión');
     }
-    await requireAdmin(context.auth);
+    await requireStaffOrAdmin(context.auth);
     const { petId, photoDataUrl } = data;
     if (!petId || !photoDataUrl) {
         throw new functions.https.HttpsError('invalid-argument', 'petId y photoDataUrl son requeridos');
@@ -615,12 +628,19 @@ exports.uploadPetPhoto = regionalFunctions.https.onCallHeavy(async (data, contex
     if (rawBuffer.length > 5 * 1024 * 1024) {
         throw new functions.https.HttpsError('invalid-argument', 'La imagen no puede superar los 5MB');
     }
-    const sharpModule = await Promise.resolve().then(() => __importStar(require('sharp')));
-    const sharpFn = sharpModule.default;
-    const optimizedBuffer = await sharpFn(rawBuffer)
-        .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toBuffer();
+    let optimizedBuffer;
+    try {
+        const sharpModule = await Promise.resolve().then(() => __importStar(require('sharp')));
+        const sharpFn = sharpModule.default;
+        optimizedBuffer = await sharpFn(rawBuffer)
+            .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toBuffer();
+    }
+    catch (err) {
+        console.error('uploadPetPhoto: error al procesar imagen', err);
+        throw new functions.https.HttpsError('invalid-argument', 'No se pudo procesar la imagen. Prueba con otra foto (JPEG o PNG válidos).');
+    }
     const filePath = `pet-photos/${petId}/${crypto.randomUUID()}.webp`;
     const downloadToken = crypto.randomUUID();
     const bucket = storage.bucket();
@@ -652,7 +672,7 @@ exports.deletePetPhoto = regionalFunctions.https.onCall(async (data, context) =>
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión');
     }
-    await requireAdmin(context.auth);
+    await requireStaffOrAdmin(context.auth);
     const { petId, photoUrl } = data;
     if (!petId || !photoUrl) {
         throw new functions.https.HttpsError('invalid-argument', 'petId y photoUrl son requeridos');

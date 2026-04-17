@@ -99,9 +99,8 @@ export default function EditPet() {
       }
 
       if (updatedPhotoUrls !== undefined) {
-        // Merge fotos existentes + nuevas
-        const existing = pet?.photo_urls ?? []
-        updates.photo_urls = [...existing, ...updatedPhotoUrls]
+        // Lista completa (existentes + nuevas); uploadPetPhoto ya guardó en Firestore, aquí alineamos el update con el mismo orden
+        updates.photo_urls = updatedPhotoUrls
       }
 
       await updatePet.mutateAsync({ id, updates })

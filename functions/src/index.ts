@@ -69,6 +69,20 @@ async function requireAdmin(auth: AuthContext): Promise<void> {
   }
 }
 
+/** Mascotas y adopciones: admin o staff (alineado con rutas del panel). */
+async function requireStaffOrAdmin(auth: AuthContext): Promise<void> {
+  const profile = await getCallerProfile(auth)
+  if (!profile) {
+    throw new functions.https.HttpsError('not-found', 'Perfil no encontrado')
+  }
+  if (!profile.is_active) {
+    throw new functions.https.HttpsError('permission-denied', 'Usuario desactivado')
+  }
+  if (profile.role !== 'admin' && profile.role !== 'staff') {
+    throw new functions.https.HttpsError('permission-denied', 'Solo personal autorizado puede realizar esta acción')
+  }
+}
+
 function sanitizeText(s: string | null | undefined): string | null {
   if (s == null) return null
   const t = s.replace(/\u0000/g, '').trim()
@@ -238,7 +252,7 @@ export const deleteUser = regionalFunctions.https.onCall(async (data, context) =
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PETS — solo admins pueden crear/editar/eliminar mascotas
+// PETS — admin o staff
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const createPet = regionalFunctions.https.onCall(async (data, context) => {
@@ -246,7 +260,7 @@ export const createPet = regionalFunctions.https.onCall(async (data, context) =>
     throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión')
   }
 
-  await requireAdmin(context.auth as AuthContext)
+  await requireStaffOrAdmin(context.auth as AuthContext)
 
   const petData = data as Record<string, unknown>
 
@@ -333,7 +347,7 @@ export const updatePet = regionalFunctions.https.onCall(async (data, context) =>
     throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión')
   }
 
-  await requireAdmin(context.auth as AuthContext)
+  await requireStaffOrAdmin(context.auth as AuthContext)
 
   const { id, ...updates } = data as { id?: string; [key: string]: unknown }
 
@@ -434,7 +448,7 @@ export const deletePet = regionalFunctions.https.onCall(async (data, context) =>
     throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión')
   }
 
-  await requireAdmin(context.auth as AuthContext)
+  await requireStaffOrAdmin(context.auth as AuthContext)
 
   const { id } = data as { id?: string }
   if (!id) {
@@ -559,7 +573,7 @@ export const updateAdoptionRequest = regionalFunctions.https.onCall(async (data,
     throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión')
   }
 
-  await requireAdmin(context.auth as AuthContext)
+  await requireStaffOrAdmin(context.auth as AuthContext)
 
   const { id, admin_notes, status } = data as {
     id?: string
@@ -631,7 +645,7 @@ export const deleteAdoptionRequest = regionalFunctions.https.onCall(async (data,
     throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión')
   }
 
-  await requireAdmin(context.auth as AuthContext)
+  await requireStaffOrAdmin(context.auth as AuthContext)
 
   const { id } = data as { id?: string }
   if (!id) {
@@ -662,7 +676,7 @@ export const deleteAdoptionRequest = regionalFunctions.https.onCall(async (data,
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STORAGE — solo admins pueden subir/eliminar fotos de mascotas
+// STORAGE — admin o staff
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const uploadPetPhoto = regionalFunctions.https.onCallHeavy(async (data, context) => {
@@ -670,7 +684,7 @@ export const uploadPetPhoto = regionalFunctions.https.onCallHeavy(async (data, c
     throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión')
   }
 
-  await requireAdmin(context.auth as AuthContext)
+  await requireStaffOrAdmin(context.auth as AuthContext)
 
   const { petId, photoDataUrl } = data as { petId?: string; photoDataUrl?: string }
 
@@ -698,13 +712,21 @@ export const uploadPetPhoto = regionalFunctions.https.onCallHeavy(async (data, c
     throw new functions.https.HttpsError('invalid-argument', 'La imagen no puede superar los 5MB')
   }
 
-  const sharpModule = await import('sharp')
-  const sharpFn = sharpModule.default
-
-  const optimizedBuffer = await sharpFn(rawBuffer)
-    .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 80 })
-    .toBuffer()
+  let optimizedBuffer: Buffer
+  try {
+    const sharpModule = await import('sharp')
+    const sharpFn = sharpModule.default
+    optimizedBuffer = await sharpFn(rawBuffer)
+      .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer()
+  } catch (err) {
+    console.error('uploadPetPhoto: error al procesar imagen', err)
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'No se pudo procesar la imagen. Prueba con otra foto (JPEG o PNG válidos).',
+    )
+  }
 
   const filePath = `pet-photos/${petId}/${crypto.randomUUID()}.webp`
   const downloadToken = crypto.randomUUID()
@@ -744,7 +766,7 @@ export const deletePetPhoto = regionalFunctions.https.onCall(async (data, contex
     throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión')
   }
 
-  await requireAdmin(context.auth as AuthContext)
+  await requireStaffOrAdmin(context.auth as AuthContext)
 
   const { petId, photoUrl } = data as { petId?: string; photoUrl?: string }
 
