@@ -45,12 +45,17 @@ const runtimeServiceAccount = process.env.FUNCTIONS_SERVICE_ACCOUNT
 // Compat layer para mantener la firma existente (data, context)
 // pero desplegar como Functions v2 en southamerica-west1.
 const functions = { https: { HttpsError: https_1.HttpsError } };
+const baseOpts = {
+    region: 'southamerica-west1',
+    ...(runtimeServiceAccount ? { serviceAccount: runtimeServiceAccount } : {}),
+};
+function makeOnCall(opts, handler) {
+    return (0, https_1.onCall)({ ...baseOpts, ...opts }, async (request) => handler(request.data, { auth: request.auth }));
+}
 const regionalFunctions = {
     https: {
-        onCall: (handler) => (0, https_1.onCall)({
-            region: 'southamerica-west1',
-            ...(runtimeServiceAccount ? { serviceAccount: runtimeServiceAccount } : {}),
-        }, async (request) => handler(request.data, { auth: request.auth })),
+        onCall: (handler) => makeOnCall({}, handler),
+        onCallHeavy: (handler) => makeOnCall({ memory: '512MiB', timeoutSeconds: 120 }, handler),
     },
 };
 async function getCallerProfile(auth) {
@@ -585,7 +590,7 @@ exports.deleteAdoptionRequest = regionalFunctions.https.onCall(async (data, cont
 // ─────────────────────────────────────────────────────────────────────────────
 // STORAGE — solo admins pueden subir/eliminar fotos de mascotas
 // ─────────────────────────────────────────────────────────────────────────────
-exports.uploadPetPhoto = regionalFunctions.https.onCall(async (data, context) => {
+exports.uploadPetPhoto = regionalFunctions.https.onCallHeavy(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión');
     }
@@ -601,25 +606,28 @@ exports.uploadPetPhoto = regionalFunctions.https.onCall(async (data, context) =>
         throw new functions.https.HttpsError('not-found', 'Mascota no encontrada');
     }
     // Decodificar base64
-    const matches = photoDataUrl.match(/^data:(image\/(jpeg|png));base64,(.+)$/);
+    const matches = photoDataUrl.match(/^data:(image\/(jpeg|png|webp));base64,(.+)$/);
     if (!matches) {
         throw new functions.https.HttpsError('invalid-argument', 'Formato de imagen inválido');
     }
-    const mimeType = matches[1];
     const base64Data = matches[3];
-    const buffer = Buffer.from(base64Data, 'base64');
-    // Límite de 5MB
-    if (buffer.length > 5 * 1024 * 1024) {
+    const rawBuffer = Buffer.from(base64Data, 'base64');
+    if (rawBuffer.length > 5 * 1024 * 1024) {
         throw new functions.https.HttpsError('invalid-argument', 'La imagen no puede superar los 5MB');
     }
-    const ext = mimeType === 'image/png' ? 'png' : 'jpg';
-    const filePath = `pet-photos/${petId}/${crypto.randomUUID()}.${ext}`;
+    const sharpModule = await Promise.resolve().then(() => __importStar(require('sharp')));
+    const sharpFn = sharpModule.default;
+    const optimizedBuffer = await sharpFn(rawBuffer)
+        .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+    const filePath = `pet-photos/${petId}/${crypto.randomUUID()}.webp`;
     const downloadToken = crypto.randomUUID();
     const bucket = storage.bucket();
-    await bucket.file(filePath).save(buffer, {
+    await bucket.file(filePath).save(optimizedBuffer, {
         metadata: {
-            contentType: mimeType,
-            cacheControl: 'public, max-age=31536000',
+            contentType: 'image/webp',
+            cacheControl: 'public, max-age=31536000, immutable',
             metadata: {
                 firebaseStorageDownloadTokens: downloadToken,
             },

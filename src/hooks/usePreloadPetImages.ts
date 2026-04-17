@@ -1,23 +1,29 @@
 /**
  * Preloading de imágenes de mascotas.
- * Resuelve URLs de Firebase Storage en paralelo, las cachea
- * y dispara la descarga real en el navegador para que cuando
- * <img> se renderice, los bytes ya estén en HTTP cache.
+ * Resuelve URLs de Firebase Storage en paralelo, las cachea en localStorage
+ * con TTL de 7 días, y dispara la descarga real en el navegador.
  */
 
 import { useEffect } from 'react'
 import { getDownloadURL, ref } from 'firebase/storage'
 import { storage } from '@/lib/firebase'
 
+const CACHE_PREFIX = 'imgurl:'
+const TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 días
+
 const memoryCache = new Map<string, string>()
 
 export function getCachedUrl(key: string): string | null {
   if (memoryCache.has(key)) return memoryCache.get(key)!
   try {
-    const stored = sessionStorage.getItem(`img:${key}`)
-    if (stored) {
-      memoryCache.set(key, stored)
-      return stored
+    const raw = localStorage.getItem(`${CACHE_PREFIX}${key}`)
+    if (raw) {
+      const parsed = JSON.parse(raw) as { url: string; exp: number }
+      if (parsed.exp > Date.now()) {
+        memoryCache.set(key, parsed.url)
+        return parsed.url
+      }
+      localStorage.removeItem(`${CACHE_PREFIX}${key}`)
     }
   } catch { /* ignore */ }
   return null
@@ -26,8 +32,11 @@ export function getCachedUrl(key: string): string | null {
 export function setCachedUrl(key: string, url: string): void {
   memoryCache.set(key, url)
   try {
-    sessionStorage.setItem(`img:${key}`, url)
-  } catch { /* ignore */ }
+    localStorage.setItem(
+      `${CACHE_PREFIX}${key}`,
+      JSON.stringify({ url, exp: Date.now() + TTL_MS }),
+    )
+  } catch { /* ignore — quota exceeded */ }
 }
 
 function triggerBrowserPreload(url: string): void {
