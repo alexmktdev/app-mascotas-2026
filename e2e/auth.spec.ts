@@ -41,27 +41,20 @@ test.describe('Auth — Autenticación y rutas protegidas', () => {
     await page.locator('input[type="email"]').fill('bad@invalid.com')
     await page.locator('input[type="password"]').fill('wrongpassword')
 
-    const submitBtn = page.getByRole('button', { name: /iniciar|login|entrar/i }).first()
-    await submitBtn.click()
+    await page.getByRole('button', { name: /^Ingresar$/i }).click()
 
-    // Esperar mensaje de error (toast o texto)
-    await page.waitForTimeout(3000)
-
-    // Debe seguir en /login
+    // Mensaje de error en pantalla (Login.tsx setServerError)
+    await expect(page.getByText(/credenciales inválidas/i)).toBeVisible({ timeout: 15_000 })
     expect(page.url()).toContain('/login')
   })
 
   test('página de login tiene validación de formulario', async ({ page }) => {
     await page.goto('/login')
 
-    // Click en submit sin llenar nada
-    const submitBtn = page.getByRole('button', { name: /iniciar|login|entrar/i }).first()
-    await submitBtn.click()
+    await page.getByRole('button', { name: /^Ingresar$/i }).click()
 
-    await page.waitForTimeout(500)
-
-    // Debe mostrar mensajes de error de validación
-    // o el botón debe ser disabled / el formulario no se envía
+    // Zod + RHF: ambos campos vacíos muestran errores (cualquiera basta para el test)
+    await expect(page.getByText('El correo es obligatorio')).toBeVisible({ timeout: 5000 })
     expect(page.url()).toContain('/login')
   })
 

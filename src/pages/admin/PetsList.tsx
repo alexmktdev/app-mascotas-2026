@@ -2,8 +2,8 @@
  * Lista de mascotas disponibles (admin).
  */
 
-import { useState, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAdminPets, useDeletePet } from '@/hooks/usePets'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -15,12 +15,30 @@ import { PetPhotoImage } from '@/components/pets/PetPhotoImage'
 import { Pencil, Trash2, PlusCircle } from 'lucide-react'
 import type { Pet } from '@/types/firebase.types'
 
+const STATUS_TABS: { key: Pet['status']; label: string; description: string }[] = [
+  { key: 'available', label: 'Disponibles', description: 'Mascotas publicadas para adopción' },
+  { key: 'in_process', label: 'En proceso', description: 'Mascotas con solicitud de adopción en curso' },
+  { key: 'adopted', label: 'Adoptadas', description: 'Mascotas ya adoptadas' },
+]
+
 export default function PetsList() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const statusParam = searchParams.get('status') as Pet['status'] | null
+  const statusFilter: Pet['status'] =
+    statusParam === 'in_process' || statusParam === 'adopted' || statusParam === 'available'
+      ? statusParam
+      : 'available'
+
   const [page, setPage] = useState(1)
   const [speciesFilter, setSpeciesFilter] = useState<string>('')
+
+  useEffect(() => {
+    setPage(1)
+  }, [statusFilter, speciesFilter])
+
   const { data, isLoading, isError, refetch } = useAdminPets({
-    status: 'available',
+    status: statusFilter,
     species: speciesFilter as Pet['species'] || undefined,
     page,
   })
@@ -130,12 +148,25 @@ export default function PetsList() {
     }
   }, [data, page])
 
+  const tabMeta = STATUS_TABS.find((t) => t.key === statusFilter) ?? STATUS_TABS[0]!
+
+  const setStatusTab = (key: Pet['status']) => {
+    setSearchParams(key === 'available' ? {} : { status: key }, { replace: true })
+  }
+
+  const emptyCopy =
+    statusFilter === 'available'
+      ? { title: 'Sin mascotas disponibles', desc: 'Agrega una nueva mascota para comenzar.' }
+      : statusFilter === 'in_process'
+        ? { title: 'Sin mascotas en proceso', desc: 'Aparecen aquí cuando alguien envía una solicitud de adopción o cambias el estado manualmente.' }
+        : { title: 'Sin mascotas adoptadas', desc: 'Las fichas adoptadas se listan aquí.' }
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold text-surface-900">Mascotas disponibles</h1>
-          <p className="text-sm text-surface-500">Gestiona las mascotas en estado disponible</p>
+          <h1 className="text-2xl font-extrabold text-surface-900">{tabMeta.label}</h1>
+          <p className="text-sm text-surface-500">{tabMeta.description}</p>
         </div>
         <Button onClick={() => navigate('/admin/pets/new')}>
           <PlusCircle className="h-4 w-4" />
@@ -143,7 +174,21 @@ export default function PetsList() {
         </Button>
       </div>
 
-      {/* Filtro rápido */}
+      {/* Estado (misma métrica que el dashboard) */}
+      <div className="flex flex-wrap gap-2">
+        {STATUS_TABS.map((tab) => (
+          <Button
+            key={tab.key}
+            variant={statusFilter === tab.key ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setStatusTab(tab.key)}
+          >
+            {tab.label}
+          </Button>
+        ))}
+      </div>
+
+      {/* Filtro especie */}
       <div className="flex gap-2">
         {['', 'dog', 'cat'].map((sp) => (
           <Button
@@ -152,7 +197,7 @@ export default function PetsList() {
             size="sm"
             onClick={() => { setSpeciesFilter(sp); setPage(1) }}
           >
-            {sp === '' ? 'Todas' : SPECIES_LABELS[sp]}
+            {sp === '' ? 'Todas las especies' : SPECIES_LABELS[sp]}
           </Button>
         ))}
       </div>
@@ -165,8 +210,8 @@ export default function PetsList() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => void refetch()}
-        emptyTitle="Sin mascotas disponibles"
-        emptyDescription="Agrega una nueva mascota para comenzar."
+        emptyTitle={emptyCopy.title}
+        emptyDescription={emptyCopy.desc}
         pagination={paginationConfig}
       />
 

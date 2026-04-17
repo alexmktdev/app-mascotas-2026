@@ -1,40 +1,40 @@
 /**
- * Tests de integración para src/hooks/useAuth.ts
+ * Tests de integración para useAuth (Firebase + Zustand).
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
+import type { User } from 'firebase/auth'
 import { useAuth } from '@/hooks/useAuth'
 import { useAuthStore } from '@/store/authStore'
-import type { Session, User } from '@supabase/supabase-js'
+import type { Profile } from '@/types/firebase.types'
 
-function mockSession(): Session {
+function mockFirebaseUser(overrides: Partial<User> = {}): User {
   return {
-    access_token: 'test-token',
-    refresh_token: 'test-refresh',
-    expires_in: 3600,
-    token_type: 'bearer',
-    user: mockUser(),
-    expires_at: Math.floor(Date.now() / 1000) + 3600,
-  }
-}
-
-function mockUser(): User {
-  return {
-    id: 'user-123',
+    uid: 'user-123',
     email: 'test@test.com',
-    aud: 'authenticated',
-    role: 'authenticated',
-    app_metadata: {},
-    user_metadata: {},
-    created_at: '2026-01-01T00:00:00Z',
-  }
+    emailVerified: true,
+    isAnonymous: false,
+    metadata: {} as User['metadata'],
+    providerData: [],
+    refreshToken: '',
+    tenantId: null,
+    delete: async () => {},
+    getIdToken: async () => 'token',
+    getIdTokenResult: async () => ({} as never),
+    reload: async () => {},
+    toJSON: () => ({}),
+    phoneNumber: null,
+    photoURL: null,
+    displayName: null,
+    providerId: 'firebase',
+    ...overrides,
+  } as User
 }
 
 describe('useAuth', () => {
   beforeEach(() => {
     useAuthStore.setState({
-      session: null,
       user: null,
       profile: null,
       isLoading: false,
@@ -42,30 +42,31 @@ describe('useAuth', () => {
     })
   })
 
-  it('isAuthenticated es false sin sesión', () => {
+  it('isAuthenticated es false sin usuario', () => {
     const { result } = renderHook(() => useAuth())
     expect(result.current.isAuthenticated).toBe(false)
   })
 
-  it('isAuthenticated es true con sesión', () => {
-    useAuthStore.setState({ session: mockSession() })
+  it('isAuthenticated es true con user en el store', () => {
+    useAuthStore.setState({ user: mockFirebaseUser() })
     const { result } = renderHook(() => useAuth())
     expect(result.current.isAuthenticated).toBe(true)
   })
 
   it('isAdmin es true con profile.role = admin', () => {
+    const profile: Profile = {
+      id: 'user-123',
+      first_name: 'Admin',
+      last_name: 'User',
+      email: 'admin@test.com',
+      role: 'admin',
+      is_active: true,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }
     useAuthStore.setState({
-      session: mockSession(),
-      profile: {
-        id: 'user-123',
-        first_name: 'Admin',
-        last_name: 'User',
-        email: 'admin@test.com',
-        role: 'admin',
-        is_active: true,
-        created_at: '2026-01-01T00:00:00Z',
-        updated_at: '2026-01-01T00:00:00Z',
-      },
+      user: mockFirebaseUser(),
+      profile,
     })
 
     const { result } = renderHook(() => useAuth())
@@ -74,18 +75,19 @@ describe('useAuth', () => {
   })
 
   it('isStaff es true con profile.role = staff', () => {
+    const profile: Profile = {
+      id: 'user-456',
+      first_name: 'Staff',
+      last_name: 'User',
+      email: 'staff@test.com',
+      role: 'staff',
+      is_active: true,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }
     useAuthStore.setState({
-      session: mockSession(),
-      profile: {
-        id: 'user-456',
-        first_name: 'Staff',
-        last_name: 'User',
-        email: 'staff@test.com',
-        role: 'staff',
-        is_active: true,
-        created_at: '2026-01-01T00:00:00Z',
-        updated_at: '2026-01-01T00:00:00Z',
-      },
+      user: mockFirebaseUser({ uid: 'user-456' }),
+      profile,
     })
 
     const { result } = renderHook(() => useAuth())
@@ -94,7 +96,7 @@ describe('useAuth', () => {
   })
 
   it('isAdmin y isStaff son false sin profile', () => {
-    useAuthStore.setState({ session: mockSession(), profile: null })
+    useAuthStore.setState({ user: mockFirebaseUser(), profile: null })
     const { result } = renderHook(() => useAuth())
     expect(result.current.isAdmin).toBe(false)
     expect(result.current.isStaff).toBe(false)

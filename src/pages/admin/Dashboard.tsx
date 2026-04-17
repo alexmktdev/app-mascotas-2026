@@ -31,10 +31,11 @@ export default function Dashboard() {
     }
   }
 
+  /** Números = mascotas por estado en Firestore (ver lista en Mascotas con filtro). */
   const statCards = [
-    { label: 'Disponibles', value: stats.available, icon: PawPrint, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-600' },
-    { label: 'En proceso', value: stats.inProcess, icon: Hourglass, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-50', text: 'text-amber-600' },
-    { label: 'Adoptadas', value: stats.adopted, icon: Heart, color: 'from-violet-500 to-violet-600', bg: 'bg-violet-50', text: 'text-violet-600' },
+    { label: 'Disponibles', value: stats.available, icon: PawPrint, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-600', to: '/admin/pets' },
+    { label: 'En proceso', value: stats.inProcess, icon: Hourglass, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-50', text: 'text-amber-600', to: '/admin/pets?status=in_process' },
+    { label: 'Adoptadas', value: stats.adopted, icon: Heart, color: 'from-violet-500 to-violet-600', bg: 'bg-violet-50', text: 'text-violet-600', to: '/admin/pets?status=adopted' },
   ]
 
   return (
@@ -47,19 +48,24 @@ export default function Dashboard() {
       {/* Tarjetas de estadísticas */}
       <div className="grid gap-4 sm:grid-cols-3">
         {statCards.map((card) => (
-          <div key={card.label} className="overflow-hidden rounded-2xl border border-surface-200 bg-white p-6 shadow-sm transition-all hover:shadow-md">
+          <Link
+            key={card.label}
+            to={card.to}
+            className="block overflow-hidden rounded-2xl border border-surface-200 bg-white p-6 shadow-sm transition-all hover:border-primary-200 hover:shadow-md"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-surface-500">{card.label}</p>
                 <p className={`mt-1 text-3xl font-extrabold text-surface-900 ${statsLoading ? 'opacity-70' : ''}`}>
                   {card.value}
                 </p>
+                <p className="mt-2 text-xs text-primary-600">Ver listado →</p>
               </div>
               <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${card.bg}`}>
                 <card.icon className={`h-6 w-6 ${card.text}`} />
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
