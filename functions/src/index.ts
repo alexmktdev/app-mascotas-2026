@@ -783,6 +783,30 @@ export const deletePetPhoto = regionalFunctions.https.onCall(async (data, contex
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MANTENIMIENTO — corregir cache headers de imágenes existentes
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const fixImageCacheHeaders = regionalFunctions.https.onCallHeavy(async (_data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión')
+  }
+  await requireAdmin(context.auth as AuthContext)
+
+  const bucket = storage.bucket()
+  const [files] = await bucket.getFiles({ prefix: 'pet-photos/' })
+
+  let fixed = 0
+  for (const file of files) {
+    await file.setMetadata({
+      cacheControl: 'public, max-age=31536000, immutable',
+    })
+    fixed++
+  }
+
+  return { fixed, message: `Se actualizaron ${fixed} imágenes con cache headers correctos` }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 

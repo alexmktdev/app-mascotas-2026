@@ -3,16 +3,33 @@
  * 3 cards de estadísticas + últimas solicitudes.
  */
 
+import { useState } from 'react'
 import { usePetStats } from '@/hooks/usePets'
 import { useRecentAdoptionRequests } from '@/hooks/useAdoptions'
 import { ADOPTION_STATUS_LABELS, ADOPTION_STATUS_COLORS } from '@/constants'
 import { formatRelativeDate } from '@/utils'
-import { PawPrint, Hourglass, Heart, Clock } from 'lucide-react'
+import { PawPrint, Hourglass, Heart, Clock, ImageIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { functionsFixImageCacheHeaders } from '@/lib/functions'
 
 export default function Dashboard() {
   const { stats, isLoading: statsLoading } = usePetStats()
   const { data: recentRequests, isLoading: requestsLoading } = useRecentAdoptionRequests()
+  const [fixStatus, setFixStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [fixMsg, setFixMsg] = useState('')
+
+  async function handleFixCache() {
+    setFixStatus('running')
+    setFixMsg('')
+    try {
+      const result = await functionsFixImageCacheHeaders()
+      setFixStatus('done')
+      setFixMsg(result.message)
+    } catch (e) {
+      setFixStatus('error')
+      setFixMsg(e instanceof Error ? e.message : 'Error desconocido')
+    }
+  }
 
   const statCards = [
     { label: 'Disponibles', value: stats.available, icon: PawPrint, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-600' },
@@ -45,6 +62,25 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Mantenimiento: corregir cache de imágenes (una sola vez) */}
+      {fixStatus !== 'done' && (
+        <div className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-6 py-4">
+          <ImageIcon className="h-5 w-5 shrink-0 text-amber-600" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-800">Optimizar caché de imágenes</p>
+            <p className="text-xs text-amber-600">Actualiza el cache de todas las fotos existentes para que carguen más rápido. Ejecutar una sola vez.</p>
+            {fixMsg && <p className={`mt-1 text-xs font-medium ${fixStatus === 'error' ? 'text-red-600' : 'text-emerald-700'}`}>{fixMsg}</p>}
+          </div>
+          <button
+            onClick={handleFixCache}
+            disabled={fixStatus === 'running'}
+            className="shrink-0 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-amber-600 disabled:opacity-60"
+          >
+            {fixStatus === 'running' ? 'Procesando...' : 'Ejecutar'}
+          </button>
+        </div>
+      )}
 
       {/* Solicitudes recientes */}
       <div className="rounded-2xl border border-surface-200 bg-white shadow-sm">

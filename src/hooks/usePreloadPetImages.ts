@@ -1,7 +1,6 @@
 /**
- * Preloading de imágenes de mascotas.
- * Resuelve URLs de Firebase Storage en paralelo, las cachea en localStorage
- * con TTL de 7 días, y dispara la descarga real en el navegador.
+ * Cache de URLs de imágenes en localStorage con TTL.
+ * Pre-resuelve URLs y precarga los bytes reales en el browser cache.
  */
 
 import { useEffect } from 'react'
@@ -9,7 +8,7 @@ import { getDownloadURL, ref } from 'firebase/storage'
 import { storage } from '@/lib/firebase'
 
 const CACHE_PREFIX = 'imgurl:'
-const TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 días
+const TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 const memoryCache = new Map<string, string>()
 
@@ -36,54 +35,38 @@ export function setCachedUrl(key: string, url: string): void {
       `${CACHE_PREFIX}${key}`,
       JSON.stringify({ url, exp: Date.now() + TTL_MS }),
     )
-  } catch { /* ignore — quota exceeded */ }
+  } catch { /* ignore */ }
 }
 
-function triggerBrowserPreload(url: string): void {
-  if (typeof document === 'undefined') return
+const preloadedUrls = new Set<string>()
 
-  const existing = document.querySelector(`link[href="${CSS.escape(url)}"]`)
-  if (existing) return
-
-  const link = document.createElement('link')
-  link.rel = 'preload'
-  link.as = 'image'
-  link.href = url
-  link.crossOrigin = 'anonymous'
-  document.head.appendChild(link)
-
-  setTimeout(() => link.remove(), 30_000)
+function warmBrowserCache(url: string): void {
+  if (preloadedUrls.has(url)) return
+  preloadedUrls.add(url)
+  const img = new Image()
+  img.src = url
 }
 
-export async function preloadPetImage(key: string): Promise<string> {
-  const trimmedKey = key.trim()
-  if (!trimmedKey) throw new Error('Empty key')
+async function resolveAndWarm(key: string): Promise<void> {
+  const trimmed = key.trim()
+  if (!trimmed) return
 
-  const cached = getCachedUrl(trimmedKey)
-  if (cached) {
-    triggerBrowserPreload(cached)
-    return cached
+  let url = getCachedUrl(trimmed)
+  if (!url) {
+    if (trimmed.startsWith('https://')) {
+      url = trimmed
+    } else {
+      url = await getDownloadURL(ref(storage, trimmed))
+    }
+    setCachedUrl(trimmed, url)
   }
-
-  let url: string
-  if (trimmedKey.startsWith('https://firebasestorage.googleapis.com')) {
-    url = trimmedKey
-  } else {
-    const storageRef = ref(storage, trimmedKey)
-    url = await getDownloadURL(storageRef)
-  }
-
-  setCachedUrl(trimmedKey, url)
-  triggerBrowserPreload(url)
-  return url
+  warmBrowserCache(url)
 }
 
 export function usePreloadPetImages(photoRefs: string[]) {
   useEffect(() => {
-    if (!photoRefs || photoRefs.length === 0) return
-
-    const uniqueKeys = [...new Set(photoRefs.filter(Boolean))]
-
-    Promise.all(uniqueKeys.map((key) => preloadPetImage(key).catch(() => null)))
+    if (!photoRefs?.length) return
+    const unique = [...new Set(photoRefs.filter(Boolean))]
+    unique.forEach((k) => resolveAndWarm(k).catch(() => {}))
   }, [photoRefs])
 }

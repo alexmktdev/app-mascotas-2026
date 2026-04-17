@@ -189,3 +189,8 @@ export const functionsUploadPetPhoto = (data: UploadPetPhotoPayload) =>
 
 export const functionsDeletePetPhoto = (data: DeletePetPhotoPayload) =>
   callFunction<DeletePetPhotoPayload, { success: boolean }>('deletePetPhoto', data)
+
+// ─── Mantenimiento ──────────────────────────────────────────────────────────
+
+export const functionsFixImageCacheHeaders = () =>
+  callFunction<Record<string, never>, { fixed: number; message: string }>('fixImageCacheHeaders', {})

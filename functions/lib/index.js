@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deletePetPhoto = exports.uploadPetPhoto = exports.deleteAdoptionRequest = exports.updateAdoptionRequest = exports.createAdoptionRequest = exports.deletePet = exports.updatePet = exports.createPet = exports.deleteUser = exports.updateUser = exports.createUser = void 0;
+exports.fixImageCacheHeaders = exports.deletePetPhoto = exports.uploadPetPhoto = exports.deleteAdoptionRequest = exports.updateAdoptionRequest = exports.createAdoptionRequest = exports.deletePet = exports.updatePet = exports.createPet = exports.deleteUser = exports.updateUser = exports.createUser = void 0;
 const admin = __importStar(require("firebase-admin"));
 const https_1 = require("firebase-functions/v2/https");
 admin.initializeApp();
@@ -682,6 +682,25 @@ exports.deletePetPhoto = regionalFunctions.https.onCall(async (data, context) =>
         updated_at: new Date().toISOString(),
     });
     return { success: true };
+});
+// ─────────────────────────────────────────────────────────────────────────────
+// MANTENIMIENTO — corregir cache headers de imágenes existentes
+// ─────────────────────────────────────────────────────────────────────────────
+exports.fixImageCacheHeaders = regionalFunctions.https.onCallHeavy(async (_data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Debe iniciar sesión');
+    }
+    await requireAdmin(context.auth);
+    const bucket = storage.bucket();
+    const [files] = await bucket.getFiles({ prefix: 'pet-photos/' });
+    let fixed = 0;
+    for (const file of files) {
+        await file.setMetadata({
+            cacheControl: 'public, max-age=31536000, immutable',
+        });
+        fixed++;
+    }
+    return { fixed, message: `Se actualizaron ${fixed} imágenes con cache headers correctos` };
 });
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
