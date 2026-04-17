@@ -550,10 +550,26 @@ exports.updateAdoptionRequest = regionalFunctions.https.onCall(async (data, cont
         updateData.status = existingStatus;
     }
     await requestRef.update(updateData);
-    // Si cambió el status, actualizar también la mascota
+    // Si cambió el status de la solicitud, alinear estado de la mascota con el flujo público:
+    // - pending / reviewing → mascota sigue "en proceso" (no lista pública)
+    // - approved → adoptada
+    // - rejected → vuelve a disponible para adopción
     if (status && status !== existing?.status) {
-        const petRef = db.collection('pets').doc(existing?.pet_id);
-        const newPetStatus = status === 'approved' ? 'adopted' : 'available';
+        const pid = existing?.pet_id;
+        if (!pid) {
+            throw new functions.https.HttpsError('failed-precondition', 'Solicitud sin mascota asociada');
+        }
+        const petRef = db.collection('pets').doc(pid);
+        let newPetStatus;
+        if (status === 'approved') {
+            newPetStatus = 'adopted';
+        }
+        else if (status === 'rejected') {
+            newPetStatus = 'available';
+        }
+        else {
+            newPetStatus = 'in_process';
+        }
         await petRef.update({
             status: newPetStatus,
             adopted_date: status === 'approved' ? now : null,
@@ -587,6 +603,14 @@ exports.deleteAdoptionRequest = regionalFunctions.https.onCall(async (data, cont
         throw new functions.https.HttpsError('not-found', 'Solicitud no encontrada');
     }
     const existing = requestSnap.data();
+    const reqStatus = existing?.status;
+    const petId = existing?.pet_id;
+    if (petId && (reqStatus === 'pending' || reqStatus === 'reviewing')) {
+        await db.collection('pets').doc(petId).update({
+            status: 'available',
+            updated_at: new Date().toISOString(),
+        });
+    }
     // Auditoría antes de borrar
     await db.collection('audit_log').add({
         table_name: 'adoption_requests',

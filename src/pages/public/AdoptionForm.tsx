@@ -21,7 +21,7 @@ import toast from 'react-hot-toast'
 
 export default function AdoptionForm() {
   const { petId } = useParams<{ petId: string }>()
-  const { data: pet, isLoading: petLoading } = usePetDetail(petId)
+  const { data: pet, isLoading: petLoading } = usePetDetail(petId, { visibility: 'public' })
   const createRequest = useCreateAdoptionRequest()
   const [formStatus, setFormStatus] = useState<FormStatus>('idle')
   const [isOnCooldown, setIsOnCooldown] = useState(false)

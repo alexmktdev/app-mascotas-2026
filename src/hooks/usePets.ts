@@ -21,6 +21,7 @@ import {
 } from '@/lib/functions'
 import { withTimeout } from '@/lib/withTimeout'
 import type { PetFilters, AdminPetFilters } from '@/types/firebase.types'
+import type { FetchPetDetailOptions } from '@/api/pets-firebase'
 import { DASHBOARD_REFETCH_INTERVAL } from '@/constants'
 import toast from 'react-hot-toast'
 
@@ -44,10 +45,11 @@ export function usePets(filters: PetFilters) {
   })
 }
 
-export function usePetDetail(id: string | undefined) {
+export function usePetDetail(id: string | undefined, options?: FetchPetDetailOptions) {
+  const visibility = options?.visibility ?? 'all'
   return useQuery({
-    queryKey: ['pet', id],
-    queryFn: () => fetchPetDetail(id!),
+    queryKey: ['pet', id, visibility],
+    queryFn: () => fetchPetDetail(id!, options),
     enabled: !!id,
   })
 }

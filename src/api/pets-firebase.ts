@@ -127,13 +127,22 @@ export async function fetchPublicPets(filters: {
   return { data: paged as PetCardData[], total, pageCount }
 }
 
-export async function fetchPetDetail(id: string): Promise<Pet> {
+export type FetchPetDetailOptions = {
+  /** Solo devuelve la mascota si está disponible para adop pública (oculta in_process / adopted). */
+  visibility?: 'public' | 'all'
+}
+
+export async function fetchPetDetail(id: string, options?: FetchPetDetailOptions): Promise<Pet> {
   const docRef = doc(db, 'pets', id)
   const docSnap = await getDoc(docRef)
   if (!docSnap.exists()) {
     throw new Error('Mascota no encontrada')
   }
-  return petFromData(docSnap.id, docSnap.data())
+  const pet = petFromData(docSnap.id, docSnap.data())
+  if (options?.visibility === 'public' && pet.status !== 'available') {
+    throw new Error('Mascota no encontrada')
+  }
+  return pet
 }
 
 export async function fetchAdminPets(filters: {

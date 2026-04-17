@@ -20,7 +20,7 @@ import {
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>()
-  const { data: pet, isLoading, error } = usePetDetail(id)
+  const { data: pet, isLoading, error } = usePetDetail(id, { visibility: 'public' })
 
   if (isLoading) {
     return (
