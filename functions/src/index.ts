@@ -206,20 +206,19 @@ export const deleteUser = regionalFunctions.https.onCall(async (data, context) =
   const profileSnap = await profileRef.get()
   const profileData = profileSnap.exists ? profileSnap.data() : null
 
-  // Desactivar usuario en lugar de borrar (para no perder historial de adopciones)
-  await profileRef.update({
-    is_active: false,
-    email: `[deleted_${Date.now()}]_${profileData?.email ?? ''}`,
-    updated_at: new Date().toISOString(),
-  })
+  // Eliminar usuario de Firebase Auth
+  await admin.auth().deleteUser(uid)
+
+  // Eliminar perfil de Firestore
+  await profileRef.delete()
 
   // Auditoría
   await db.collection('audit_log').add({
     table_name: 'profiles',
     record_id: uid,
-    action: 'UPDATE',
+    action: 'DELETE',
     old_values: profileData,
-    new_values: { is_active: false, email: 'soft_deleted' },
+    new_values: null,
     performed_by: context.auth.uid,
     performed_at: new Date().toISOString(),
   })
