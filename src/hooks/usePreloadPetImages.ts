@@ -1,7 +1,8 @@
 /**
  * Preloading de imágenes de mascotas.
- * Resuelve todas las URLs de Firebase Storage en paralelo
- * y las cachea en sessionStorage para que PetPhotoImage las use instantáneamente.
+ * Resuelve URLs de Firebase Storage en paralelo, las cachea
+ * y dispara la descarga real en el navegador para que cuando
+ * <img> se renderice, los bytes ya estén en HTTP cache.
  */
 
 import { useEffect } from 'react'
@@ -29,12 +30,31 @@ export function setCachedUrl(key: string, url: string): void {
   } catch { /* ignore */ }
 }
 
+function triggerBrowserPreload(url: string): void {
+  if (typeof document === 'undefined') return
+
+  const existing = document.querySelector(`link[href="${CSS.escape(url)}"]`)
+  if (existing) return
+
+  const link = document.createElement('link')
+  link.rel = 'preload'
+  link.as = 'image'
+  link.href = url
+  link.crossOrigin = 'anonymous'
+  document.head.appendChild(link)
+
+  setTimeout(() => link.remove(), 30_000)
+}
+
 export async function preloadPetImage(key: string): Promise<string> {
   const trimmedKey = key.trim()
   if (!trimmedKey) throw new Error('Empty key')
 
   const cached = getCachedUrl(trimmedKey)
-  if (cached) return cached
+  if (cached) {
+    triggerBrowserPreload(cached)
+    return cached
+  }
 
   let url: string
   if (trimmedKey.startsWith('https://firebasestorage.googleapis.com')) {
@@ -45,6 +65,7 @@ export async function preloadPetImage(key: string): Promise<string> {
   }
 
   setCachedUrl(trimmedKey, url)
+  triggerBrowserPreload(url)
   return url
 }
 

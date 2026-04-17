@@ -185,19 +185,17 @@ exports.deleteUser = regionalFunctions.https.onCall(async (data, context) => {
     const profileRef = db.collection('profiles').doc(uid);
     const profileSnap = await profileRef.get();
     const profileData = profileSnap.exists ? profileSnap.data() : null;
-    // Desactivar usuario en lugar de borrar (para no perder historial de adopciones)
-    await profileRef.update({
-        is_active: false,
-        email: `[deleted_${Date.now()}]_${profileData?.email ?? ''}`,
-        updated_at: new Date().toISOString(),
-    });
+    // Eliminar usuario de Firebase Auth
+    await admin.auth().deleteUser(uid);
+    // Eliminar perfil de Firestore
+    await profileRef.delete();
     // Auditoría
     await db.collection('audit_log').add({
         table_name: 'profiles',
         record_id: uid,
-        action: 'UPDATE',
+        action: 'DELETE',
         old_values: profileData,
-        new_values: { is_active: false, email: 'soft_deleted' },
+        new_values: null,
         performed_by: context.auth.uid,
         performed_at: new Date().toISOString(),
     });
@@ -510,15 +508,13 @@ exports.updateAdoptionRequest = regionalFunctions.https.onCall(async (data, cont
     if (!status && admin_notes === undefined) {
         throw new functions.https.HttpsError('invalid-argument', 'Debe proporcionar status o admin_notes');
     }
-    if (status && !['pending', 'reviewing', 'approved', 'rejected'].includes(status)) {
-        throw new functions.https.HttpsError('invalid-argument', 'Status inválido');
-    }
     const requestRef = db.collection('adoption_requests').doc(id);
     const requestSnap = await requestRef.get();
     if (!requestSnap.exists) {
         throw new functions.https.HttpsError('not-found', 'Solicitud no encontrada');
     }
     const existing = requestSnap.data();
+    const existingStatus = existing?.status ?? 'pending';
     const now = new Date().toISOString();
     const updateData = {
         reviewed_by: context.auth.uid,
@@ -526,8 +522,15 @@ exports.updateAdoptionRequest = regionalFunctions.https.onCall(async (data, cont
     };
     if (admin_notes !== undefined)
         updateData.admin_notes = admin_notes;
-    if (status !== undefined)
+    if (status !== undefined) {
+        if (!['pending', 'reviewing', 'approved', 'rejected'].includes(status)) {
+            throw new functions.https.HttpsError('invalid-argument', 'Status inválido');
+        }
         updateData.status = status;
+    }
+    else {
+        updateData.status = existingStatus;
+    }
     await requestRef.update(updateData);
     // Si cambió el status, actualizar también la mascota
     if (status && status !== existing?.status) {
@@ -616,7 +619,7 @@ exports.uploadPetPhoto = regionalFunctions.https.onCall(async (data, context) =>
     await bucket.file(filePath).save(buffer, {
         metadata: {
             contentType: mimeType,
-            cacheControl: '31536000',
+            cacheControl: 'public, max-age=31536000',
             metadata: {
                 firebaseStorageDownloadTokens: downloadToken,
             },

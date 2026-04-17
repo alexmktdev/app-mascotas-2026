@@ -697,7 +697,7 @@ export const uploadPetPhoto = regionalFunctions.https.onCall(async (data, contex
   await bucket.file(filePath).save(buffer, {
     metadata: {
       contentType: mimeType,
-      cacheControl: '31536000',
+      cacheControl: 'public, max-age=31536000',
       metadata: {
         firebaseStorageDownloadTokens: downloadToken,
       },

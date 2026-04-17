@@ -61,6 +61,7 @@ export function PetSlider({ photoUrls, petName, size = 'card', cardIndex = 99 }:
           photoRef={photoUrls[0]!}
           alt={petName}
           loading={cardIndex < 3 ? 'eager' : 'lazy'}
+          priority={cardIndex < 3}
           className={imageWrapperClass}
           imageClassName={imgClass}
         />
@@ -78,6 +79,7 @@ export function PetSlider({ photoUrls, petName, size = 'card', cardIndex = 99 }:
                 photoRef={url}
                 alt={`${petName} - Foto ${idx + 1}`}
                 loading={cardIndex < 3 && idx === 0 ? 'eager' : 'lazy'}
+                priority={cardIndex < 3 && idx === 0}
                 className={imageWrapperClass}
                 imageClassName={imgClass}
               />

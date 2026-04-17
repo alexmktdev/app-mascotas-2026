@@ -10,6 +10,19 @@ interface PetPhotoImageProps {
   imageClassName?: string
   loading?: 'eager' | 'lazy'
   aspectRatio?: string
+  /** true for above-the-fold images (first 3 cards) */
+  priority?: boolean
+}
+
+function resolveInitialUrl(key: string): string {
+  if (!key) return ''
+  const cached = getCachedUrl(key)
+  if (cached) return cached
+  if (key.startsWith('https://firebasestorage.googleapis.com')) {
+    setCachedUrl(key, key)
+    return key
+  }
+  return ''
 }
 
 export const PetPhotoImage = memo(function PetPhotoImage({
@@ -19,12 +32,13 @@ export const PetPhotoImage = memo(function PetPhotoImage({
   imageClassName = 'h-full w-full object-cover',
   loading = 'eager',
   aspectRatio,
+  priority = false,
 }: PetPhotoImageProps) {
   const key = photoRef.trim()
-  const cachedUrl = getCachedUrl(key)
+  const initialUrl = resolveInitialUrl(key)
 
-  const [imgSrc, setImgSrc] = useState<string>(cachedUrl ?? '')
-  const [isLoaded, setIsLoaded] = useState(cachedUrl !== null)
+  const [imgSrc, setImgSrc] = useState<string>(initialUrl)
+  const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     if (!key) {
@@ -33,43 +47,28 @@ export const PetPhotoImage = memo(function PetPhotoImage({
       return
     }
 
-    const cached = getCachedUrl(key)
-    if (cached) {
-      setImgSrc(cached)
-      setIsLoaded(true)
-      return
-    }
-
-    setImgSrc('')
-    setIsLoaded(false)
+    if (imgSrc) return
 
     let cancelled = false
 
     ;(async () => {
       try {
-        let url: string
-        if (key.startsWith('https://firebasestorage.googleapis.com')) {
-          url = key
-        } else {
-          const storageRef = ref(storage, key)
-          url = await getDownloadURL(storageRef)
+        const cached = getCachedUrl(key)
+        if (cached) {
+          if (!cancelled) setImgSrc(cached)
+          return
         }
+        const storageRef = ref(storage, key)
+        const url = await getDownloadURL(storageRef)
         setCachedUrl(key, url)
-        if (!cancelled) {
-          setImgSrc(url)
-          setIsLoaded(true)
-        }
+        if (!cancelled) setImgSrc(url)
       } catch {
-        if (!cancelled) {
-          setIsLoaded(true)
-        }
+        if (!cancelled) setIsLoaded(true)
       }
     })()
 
-    return () => {
-      cancelled = true
-    }
-  }, [key])
+    return () => { cancelled = true }
+  }, [key, imgSrc])
 
   return (
     <div
@@ -77,7 +76,7 @@ export const PetPhotoImage = memo(function PetPhotoImage({
       style={aspectRatio ? { aspectRatio } : { aspectRatio: '1/1' }}
     >
       <div className="absolute inset-0 bg-surface-100" />
-      {!isLoaded && (
+      {!isLoaded && imgSrc && (
         <div className="absolute inset-0 z-10 flex items-center justify-center">
           <svg className="h-8 w-8 animate-spin text-surface-400" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -91,18 +90,21 @@ export const PetPhotoImage = memo(function PetPhotoImage({
           alt={alt}
           className={imageClassName}
           loading={loading}
+          decoding="async"
+          {...(priority ? { fetchPriority: 'high' as const } : {})}
           onLoad={() => setIsLoaded(true)}
-          onError={() => {
-            setIsLoaded(true)
-          }}
+          onError={() => setIsLoaded(true)}
           style={{ opacity: isLoaded ? 1 : 0, transition: 'opacity 0.15s ease-out', willChange: 'opacity' }}
         />
       ) : (
-        <div className="absolute inset-0 z-20 flex items-center justify-center">
-          <svg className="h-8 w-8 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        </div>
+        !isLoaded && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <svg className="h-8 w-8 animate-spin text-surface-400" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          </div>
+        )
       )}
     </div>
   )
