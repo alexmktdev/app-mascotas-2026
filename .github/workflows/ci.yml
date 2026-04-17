@@ -1,0 +1,66 @@
+# CI: pruebas de seguridad (reglas Firestore/Storage + auditoría extendida) y comprobación de build.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security:
+    name: Seguridad (reglas + auditoría extendida)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      # Emulador de Firestore (JAR) requiere JVM.
+      - name: Java 17 (emulador Firestore)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Auditoría extendida (deps, patrones, git, CF estático)
+        run: npm run test:security:extended
+        env:
+          # URL pública para comprobar HTTPS y cabeceras (HEAD). Opcional: secret SECURITY_AUDIT_URL para otro entorno.
+          SECURITY_AUDIT_URL: ${{ secrets.SECURITY_AUDIT_URL || 'https://app-mascotas-2026.vercel.app' }}
+
+      - name: Reglas Firestore y Storage (emulador)
+        run: npm run test:security
+
+  build:
+    name: Lint, tests y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Vitest (unit)
+        run: npm run test
+
+      - name: Build producción
+        run: npm run build
