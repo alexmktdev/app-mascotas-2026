@@ -23,7 +23,7 @@ const STATUS_TABS: { key: Pet['status']; label: string; description: string }[] 
 
 export default function PetsList() {
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const statusParam = searchParams.get('status') as Pet['status'] | null
   const statusFilter: Pet['status'] =
     statusParam === 'in_process' || statusParam === 'adopted' || statusParam === 'available'
@@ -150,10 +150,6 @@ export default function PetsList() {
 
   const tabMeta = STATUS_TABS.find((t) => t.key === statusFilter) ?? STATUS_TABS[0]!
 
-  const setStatusTab = (key: Pet['status']) => {
-    setSearchParams(key === 'available' ? {} : { status: key }, { replace: true })
-  }
-
   const emptyCopy =
     statusFilter === 'available'
       ? { title: 'Sin mascotas disponibles', desc: 'Agrega una nueva mascota para comenzar.' }
@@ -167,25 +163,24 @@ export default function PetsList() {
         <div>
           <h1 className="text-2xl font-extrabold text-surface-900">{tabMeta.label}</h1>
           <p className="text-sm text-surface-500">{tabMeta.description}</p>
+          {statusFilter === 'in_process' && (
+            <p className="mt-2 text-xs text-surface-500">
+              ¿Buscas <strong className="font-semibold text-surface-700">solicitudes</strong> de adopción (aprobar/rechazar)? Usa el menú{' '}
+              <button
+                type="button"
+                className="font-semibold text-primary-600 underline decoration-primary-300 underline-offset-2 hover:text-primary-700"
+                onClick={() => navigate('/admin/in-process')}
+              >
+                En proceso de adopción
+              </button>
+              .
+            </p>
+          )}
         </div>
         <Button onClick={() => navigate('/admin/pets/new')}>
           <PlusCircle className="h-4 w-4" />
           Agregar
         </Button>
-      </div>
-
-      {/* Estado (misma métrica que el dashboard) */}
-      <div className="flex flex-wrap gap-2">
-        {STATUS_TABS.map((tab) => (
-          <Button
-            key={tab.key}
-            variant={statusFilter === tab.key ? 'primary' : 'outline'}
-            size="sm"
-            onClick={() => setStatusTab(tab.key)}
-          >
-            {tab.label}
-          </Button>
-        ))}
       </div>
 
       {/* Filtro especie */}

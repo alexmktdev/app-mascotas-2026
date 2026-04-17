@@ -31,11 +31,11 @@ export default function Dashboard() {
     }
   }
 
-  /** Números = mascotas por estado en Firestore (ver lista en Mascotas con filtro). */
+  /** Conteos por estado de mascota. Disponibles / en proceso (ficha) enlazan a la lista; adoptadas a su página dedicada. */
   const statCards = [
     { label: 'Disponibles', value: stats.available, icon: PawPrint, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-600', to: '/admin/pets' },
     { label: 'En proceso', value: stats.inProcess, icon: Hourglass, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-50', text: 'text-amber-600', to: '/admin/pets?status=in_process' },
-    { label: 'Adoptadas', value: stats.adopted, icon: Heart, color: 'from-violet-500 to-violet-600', bg: 'bg-violet-50', text: 'text-violet-600', to: '/admin/pets?status=adopted' },
+    { label: 'Adoptadas', value: stats.adopted, icon: Heart, color: 'from-violet-500 to-violet-600', bg: 'bg-violet-50', text: 'text-violet-600', to: '/admin/adopted' },
   ]
 
   return (
