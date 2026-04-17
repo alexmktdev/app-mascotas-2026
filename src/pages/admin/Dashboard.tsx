@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import { usePetStats } from '@/hooks/usePets'
-import { useRecentAdoptionRequests } from '@/hooks/useAdoptions'
+import { useRecentAdoptionRequests, useActionableAdoptionRequestsCount } from '@/hooks/useAdoptions'
 import { ADOPTION_STATUS_LABELS, ADOPTION_STATUS_COLORS } from '@/constants'
 import { formatRelativeDate } from '@/utils'
 import { PawPrint, Hourglass, Heart, Clock, ImageIcon } from 'lucide-react'
@@ -14,6 +14,7 @@ import { functionsFixImageCacheHeaders } from '@/lib/functions'
 
 export default function Dashboard() {
   const { stats, isLoading: statsLoading } = usePetStats()
+  const { count: actionableAdoptions, isLoading: actionableLoading } = useActionableAdoptionRequestsCount()
   const { data: recentRequests, isLoading: requestsLoading } = useRecentAdoptionRequests()
   const [fixStatus, setFixStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [fixMsg, setFixMsg] = useState('')
@@ -31,11 +32,20 @@ export default function Dashboard() {
     }
   }
 
-  /** Conteos por estado de mascota. Disponibles / en proceso (ficha) enlazan a la lista; adoptadas a su página dedicada. */
+  /** Disponibles/adoptadas = mascotas por estado. En proceso = solicitudes pendientes o en revisión (aprobar/rechazar). */
   const statCards = [
-    { label: 'Disponibles', value: stats.available, icon: PawPrint, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-600', to: '/admin/pets' },
-    { label: 'En proceso', value: stats.inProcess, icon: Hourglass, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-50', text: 'text-amber-600', to: '/admin/pets?status=in_process' },
-    { label: 'Adoptadas', value: stats.adopted, icon: Heart, color: 'from-violet-500 to-violet-600', bg: 'bg-violet-50', text: 'text-violet-600', to: '/admin/adopted' },
+    { label: 'Disponibles', value: stats.available, icon: PawPrint, color: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-50', text: 'text-emerald-600', to: '/admin/pets', dim: statsLoading },
+    {
+      label: 'En proceso',
+      value: actionableAdoptions,
+      icon: Hourglass,
+      color: 'from-amber-500 to-amber-600',
+      bg: 'bg-amber-50',
+      text: 'text-amber-600',
+      to: '/admin/in-process',
+      dim: actionableLoading,
+    },
+    { label: 'Adoptadas', value: stats.adopted, icon: Heart, color: 'from-violet-500 to-violet-600', bg: 'bg-violet-50', text: 'text-violet-600', to: '/admin/adopted', dim: statsLoading },
   ]
 
   return (
@@ -56,7 +66,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-surface-500">{card.label}</p>
-                <p className={`mt-1 text-3xl font-extrabold text-surface-900 ${statsLoading ? 'opacity-70' : ''}`}>
+                <p className={`mt-1 text-3xl font-extrabold text-surface-900 ${card.dim ? 'opacity-70' : ''}`}>
                   {card.value}
                 </p>
                 <p className="mt-2 text-xs text-primary-600">Ver listado →</p>

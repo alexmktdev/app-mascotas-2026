@@ -6,6 +6,7 @@
 import {
   collection,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
   query,
@@ -17,6 +18,13 @@ import type { AdoptionRequest, AdminAdoptionRow, PaginatedResponse } from '@/typ
 import { ADMIN_PAGE_SIZE } from '@/constants'
 
 const adoptionsCollection = collection(db, 'adoption_requests')
+
+/** Solicitudes pendientes o en revisión (misma vista que aprobar/rechazar en el panel). */
+export async function fetchActionableAdoptionRequestsCount(): Promise<number> {
+  const q = query(adoptionsCollection, where('status', 'in', ['pending', 'reviewing']))
+  const snap = await getCountFromServer(q)
+  return snap.data().count
+}
 
 function adoptionFromData(id: string, data: Record<string, unknown>): AdoptionRequest {
   return {

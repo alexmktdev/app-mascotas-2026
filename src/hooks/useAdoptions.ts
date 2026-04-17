@@ -9,6 +9,7 @@ import {
   fetchAdoptionRequests,
   fetchAdoptionRequestDetail,
   fetchRecentAdoptionRequests,
+  fetchActionableAdoptionRequestsCount,
 } from '@/api/adoptions-firebase'
 import {
   functionsCreateAdoptionRequest,
@@ -49,6 +50,19 @@ export function useRecentAdoptionRequests() {
   })
 }
 
+export function useActionableAdoptionRequestsCount() {
+  const countQuery = useQuery({
+    queryKey: ['adoption-actionable-count'],
+    queryFn: () => fetchActionableAdoptionRequestsCount(),
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+  })
+
+  return {
+    count: countQuery.data ?? 0,
+    isLoading: countQuery.isLoading,
+  }
+}
+
 // ─── MUTACIONES —van por Cloud Functions ────────────────────────────────────
 
 const ADOPTION_SUBMIT_MS = 90_000
@@ -68,6 +82,8 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 export function useCreateAdoptionRequest() {
+  const queryClient = useQueryClient()
+
   return useMutation({
     mutationFn: (request: CreateAdoptionRequestPayload) =>
       withTimeout(
@@ -76,6 +92,9 @@ export function useCreateAdoptionRequest() {
         'Tiempo máximo agotado al enviar la solicitud. Revisa tu conexión e inténtalo de nuevo.',
       ),
     retry: false,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['adoption-actionable-count'] })
+    },
     onError: (error: unknown) => {
       const msg = getErrorMessage(error, 'Error al enviar solicitud')
       toast.error(msg)
@@ -101,6 +120,7 @@ export function useUpdateAdoptionStatus() {
       queryClient.invalidateQueries({ queryKey: ['adoption-requests'] })
       queryClient.invalidateQueries({ queryKey: ['adoption-request'] })
       queryClient.invalidateQueries({ queryKey: ['recent-adoption-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['adoption-actionable-count'] })
       queryClient.invalidateQueries({ queryKey: ['pet-stats-all'] })
       toast.success('Solicitud actualizada')
     },
@@ -126,6 +146,7 @@ export function useDeleteAdoptionRequest() {
       queryClient.invalidateQueries({ queryKey: ['adoption-requests'] })
       queryClient.invalidateQueries({ queryKey: ['adoption-request'] })
       queryClient.invalidateQueries({ queryKey: ['recent-adoption-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['adoption-actionable-count'] })
       queryClient.invalidateQueries({ queryKey: ['pet-stats-all'] })
       toast.success('Solicitud eliminada')
     },

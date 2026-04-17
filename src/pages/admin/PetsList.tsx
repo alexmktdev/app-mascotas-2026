@@ -17,7 +17,6 @@ import type { Pet } from '@/types/firebase.types'
 
 const STATUS_TABS: { key: Pet['status']; label: string; description: string }[] = [
   { key: 'available', label: 'Disponibles', description: 'Mascotas publicadas para adopción' },
-  { key: 'in_process', label: 'En proceso', description: 'Mascotas con solicitud de adopción en curso' },
   { key: 'adopted', label: 'Adoptadas', description: 'Mascotas ya adoptadas' },
 ]
 
@@ -25,10 +24,15 @@ export default function PetsList() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const statusParam = searchParams.get('status') as Pet['status'] | null
+
+  useEffect(() => {
+    if (statusParam === 'in_process') {
+      navigate('/admin/in-process', { replace: true })
+    }
+  }, [statusParam, navigate])
+
   const statusFilter: Pet['status'] =
-    statusParam === 'in_process' || statusParam === 'adopted' || statusParam === 'available'
-      ? statusParam
-      : 'available'
+    statusParam === 'adopted' || statusParam === 'available' ? statusParam : 'available'
 
   const [page, setPage] = useState(1)
   const [speciesFilter, setSpeciesFilter] = useState<string>('')
@@ -153,9 +157,7 @@ export default function PetsList() {
   const emptyCopy =
     statusFilter === 'available'
       ? { title: 'Sin mascotas disponibles', desc: 'Agrega una nueva mascota para comenzar.' }
-      : statusFilter === 'in_process'
-        ? { title: 'Sin mascotas en proceso', desc: 'Aparecen aquí cuando alguien envía una solicitud de adopción o cambias el estado manualmente.' }
-        : { title: 'Sin mascotas adoptadas', desc: 'Las fichas adoptadas se listan aquí.' }
+      : { title: 'Sin mascotas adoptadas', desc: 'Las fichas adoptadas se listan aquí.' }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -163,19 +165,6 @@ export default function PetsList() {
         <div>
           <h1 className="text-2xl font-extrabold text-surface-900">{tabMeta.label}</h1>
           <p className="text-sm text-surface-500">{tabMeta.description}</p>
-          {statusFilter === 'in_process' && (
-            <p className="mt-2 text-xs text-surface-500">
-              ¿Buscas <strong className="font-semibold text-surface-700">solicitudes</strong> de adopción (aprobar/rechazar)? Usa el menú{' '}
-              <button
-                type="button"
-                className="font-semibold text-primary-600 underline decoration-primary-300 underline-offset-2 hover:text-primary-700"
-                onClick={() => navigate('/admin/in-process')}
-              >
-                En proceso de adopción
-              </button>
-              .
-            </p>
-          )}
         </div>
         <Button onClick={() => navigate('/admin/pets/new')}>
           <PlusCircle className="h-4 w-4" />
