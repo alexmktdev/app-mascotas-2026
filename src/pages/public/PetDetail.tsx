@@ -26,7 +26,7 @@ export default function PetDetail() {
     return (
       <div className="space-y-6 animate-fade-in">
         <Skeleton className="h-4 w-48" />
-        <Skeleton className="mx-auto h-56 w-full max-w-sm !rounded-xl" />
+        <Skeleton className="h-80 w-full !rounded-2xl" />
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-4 w-96" />
       </div>
@@ -80,7 +80,7 @@ export default function PetDetail() {
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Fotos */}
-        <div className="w-full max-w-sm mx-auto min-h-0 overflow-hidden rounded-xl border border-surface-200 shadow-sm">
+        <div className="w-full min-h-0 overflow-hidden rounded-2xl border border-surface-200 shadow-sm">
           <PetSlider photoUrls={pet.photo_urls} petName={pet.name} size="detail" cardIndex={0} />
         </div>
 
