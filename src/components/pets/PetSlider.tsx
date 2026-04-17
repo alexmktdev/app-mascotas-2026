@@ -18,9 +18,9 @@ interface PetSliderProps {
 /** Detalle: ocupa todo el ancho de la columna, cuadrado proporcional (sin caja gris gigante alrededor). */
 function frameClass(size: 'card' | 'detail') {
   if (size === 'detail') {
-    return 'aspect-square w-full min-h-0 overflow-hidden bg-surface-100'
+    return 'aspect-[4/3] w-full max-w-sm mx-auto min-h-0 overflow-hidden bg-surface-100 rounded-xl'
   }
-  return 'aspect-square w-full min-h-0 overflow-hidden bg-surface-100'
+  return 'aspect-[4/3] w-full min-h-0 overflow-hidden bg-surface-100'
 }
 
 export function PetSlider({ photoUrls, petName, size = 'card', cardIndex = 99 }: PetSliderProps) {
