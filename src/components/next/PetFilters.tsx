@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useTransition } from 'react'
 import { Cat, Search } from 'lucide-react'
 import { SPECIES_LABELS, DOG_BREEDS, CAT_BREEDS } from '@/constants'
 
@@ -9,13 +9,26 @@ export function PetFilters() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [, startTransition] = useTransition()
 
-  const currentSpecies = searchParams.get('species') as 'dog' | 'cat' | null
-  const currentBreed = searchParams.get('breed')
+  // Copia local de los params: se actualiza al instante en cada interacción
+  // (checkbox, select, etc.) para que la UI no espere al re-render del
+  // Server Component, que llega después vía router.replace + transition.
+  const [localParams, setLocalParams] = useState(() => new URLSearchParams(searchParams.toString()))
 
-  const replace = useCallback((params: URLSearchParams) => {
+  useEffect(() => {
+    setLocalParams(new URLSearchParams(searchParams.toString()))
+  }, [searchParams])
+
+  const currentSpecies = localParams.get('species') as 'dog' | 'cat' | null
+  const currentBreed = localParams.get('breed')
+
+  const applyParams = useCallback((params: URLSearchParams) => {
+    setLocalParams(params)
     const qs = params.toString()
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    startTransition(() => {
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    })
   }, [router, pathname])
 
   // Estado local para el buscador de texto con debounce
@@ -23,7 +36,7 @@ export function PetFilters() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString())
+      const params = new URLSearchParams(localParams.toString())
       const currentParam = params.get('search') ?? ''
       const trimmed = searchValue.trim()
 
@@ -34,7 +47,7 @@ export function PetFilters() {
           params.delete('search')
         }
         params.delete('page')
-        replace(params)
+        applyParams(params)
       }
     }, 450)
     return () => clearTimeout(timer)
@@ -46,7 +59,7 @@ export function PetFilters() {
   }, [searchParams])
 
   const updateParam = useCallback((key: string, value: string, isChecked: boolean, isMulti = true) => {
-    const params = new URLSearchParams(searchParams.toString())
+    const params = new URLSearchParams(localParams.toString())
 
     if (isMulti) {
       const currentValues = params.getAll(key)
@@ -63,11 +76,12 @@ export function PetFilters() {
     }
 
     params.delete('page')
-    replace(params)
-  }, [searchParams, replace])
+    applyParams(params)
+  }, [localParams, applyParams])
 
   const clearFilters = () => {
-    router.replace(pathname, { scroll: false })
+    setSearchValue('')
+    applyParams(new URLSearchParams())
   }
 
   const breedOptions = useMemo(() => {
@@ -84,7 +98,7 @@ export function PetFilters() {
   )
 
   const Checkbox = ({ label, value, group }: { label: string; value: string; group: string }) => {
-    const isChecked = searchParams.getAll(group).includes(value)
+    const isChecked = localParams.getAll(group).includes(value)
     return (
       <label className="flex cursor-pointer items-center gap-2.5 group">
         <div className="relative flex items-center justify-center">
@@ -112,7 +126,7 @@ export function PetFilters() {
       </div>
       <div className="flex items-center justify-between mb-8 border-b border-surface-100 pb-4">
         <h2 className="text-xl font-extrabold text-surface-900">Filtros</h2>
-        {searchParams.toString() !== '' && (
+        {localParams.toString() !== '' && (
           <button
             onClick={clearFilters}
             className="text-xs font-bold text-rose-600 hover:text-rose-700 uppercase tracking-wider"
