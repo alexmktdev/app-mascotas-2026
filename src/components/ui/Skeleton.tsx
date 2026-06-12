@@ -50,3 +50,27 @@ export function StatCardSkeleton() {
     </div>
   )
 }
+
+/** Skeleton de tabla del panel admin (cabecera + filas), igual al wrapper de DataTable */
+export function AdminTableSkeleton({ columns = 5, rows = 5 }: { columns?: number; rows?: number }) {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-surface-200">
+      <table className="w-full min-w-[720px] text-left text-sm">
+        <thead>
+          <tr className="border-b border-surface-200 bg-surface-50">
+            {Array.from({ length: columns }).map((_, i) => (
+              <th key={i} className="px-4 py-3">
+                <Skeleton className="h-3 w-20" />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-surface-100/90">
+          {Array.from({ length: rows }).map((_, i) => (
+            <TableRowSkeleton key={i} columns={columns} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
