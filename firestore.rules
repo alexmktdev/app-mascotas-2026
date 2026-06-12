@@ -2,56 +2,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function currentUserIsStaffOrAdmin() {
-      return request.auth != null &&
-        exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role in ['admin', 'staff'];
-    }
-
     // ═══════════════════════════════════════════════════════════════════════
-    // DENY ALL WRITES — Solo Cloud Functions pueden escribir.
-    // Las reglas de arriba son defensa en profundidad; TODO el auth real
-    // sucede en las Cloud Functions.
+    // DENY ALL — El acceso a Firestore es exclusivamente vía Firebase Admin
+    // SDK desde el servidor de Next.js (Server Components, Route Handlers y
+    // Server Actions). El cliente web ya no usa firebase/firestore.
+    //
+    // El Admin SDK bypassa estas reglas; se mantienen como documentación y
+    // como defensa en profundidad ante una eventual exposición accidental
+    // de credenciales del cliente.
     // ═══════════════════════════════════════════════════════════════════════
-
-    match /{path=**}/** {
-      allow read: if false;
-      allow write: if false;
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // PETS — Lectura PÚBLICA (página de adopción). No requiere auth.
-    // ═══════════════════════════════════════════════════════════════════════
-    match /pets/{petId} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // AUDIT_LOG — Solo lectura para admins (Cloud Functions escriben).
-    // ═══════════════════════════════════════════════════════════════════════
-    match /audit_log/{logId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // PROFILES — Cada usuario lee el suyo (login / sesión). Admin/staff listan todos.
-    // ═══════════════════════════════════════════════════════════════════════
-    match /profiles/{userId} {
-      allow read: if request.auth != null && (
-        request.auth.uid == userId ||
-        currentUserIsStaffOrAdmin()
-      );
-      allow write: if false;
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // ADOPTION_REQUESTS — Solo panel admin/staff (lectura). Escritura vía Functions.
-    // ═══════════════════════════════════════════════════════════════════════
-    match /adoption_requests/{requestId} {
-      allow read: if currentUserIsStaffOrAdmin();
-      allow write: if false;
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

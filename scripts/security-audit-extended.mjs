@@ -174,21 +174,20 @@ function checkLeakedSecrets() {
   else add('secrets-in-tracked-files', 'PASS', 'sin coincidencias obvias en archivos trackeados')
 }
 
-// ─── 4. Cloud Functions: auth y helpers de rol (análisis estático) ─────────
-function checkCloudFunctionsStatic() {
-  const fnIndex = join(root, 'functions/src/index.ts')
-  if (!existsSync(fnIndex)) {
-    add('functions-auth-static', 'SKIP', 'functions/src/index.ts no encontrado')
+// ─── 4. Server actions: auth y helpers de rol (análisis estático) ──────────
+function checkServerAuthStatic() {
+  const authContext = join(root, 'src/server/auth-context.ts')
+  if (!existsSync(authContext)) {
+    add('server-auth-static', 'SKIP', 'src/server/auth-context.ts no encontrado')
     return
   }
-  const code = readFileSync(fnIndex, 'utf8')
+  const code = readFileSync(authContext, 'utf8')
   const issues = []
-  if (!code.includes('if (!context.auth)')) issues.push('revisar presencia de guard auth en handlers')
-  if (!code.includes('requireStaffOrAdmin') && !code.includes('requireAdmin')) issues.push('helpers de rol no encontrados')
-  const onCallBlocks = code.split(/export const \w+ = regionalFunctions\.https\.onCall/)
-  if (onCallBlocks.length < 2) issues.push('pocos handlers onCall detectados')
-  if (issues.length) add('functions-auth-static', 'WARN', issues.join(' | '))
-  else add('functions-auth-static', 'PASS', 'presencia de auth y require* en index.ts')
+  if (!code.includes('requireAuth')) issues.push('requireAuth no encontrado')
+  if (!code.includes('requireAdmin')) issues.push('requireAdmin no encontrado')
+  if (!code.includes('requireStaffOrAdmin')) issues.push('requireStaffOrAdmin no encontrado')
+  if (issues.length) add('server-auth-static', 'WARN', issues.join(' | '))
+  else add('server-auth-static', 'PASS', 'helpers requireAuth/requireAdmin/requireStaffOrAdmin presentes')
 }
 
 // ─── 5. HTTPS y cabeceras (HEAD opcional) ───────────────────────────────────
@@ -271,7 +270,7 @@ async function main() {
   checkNpmAudit()
   checkDangerousFrontendPatterns()
   checkLeakedSecrets()
-  checkCloudFunctionsStatic()
+  checkServerAuthStatic()
   await checkHeadersAndHttps()
   checkEnvInGitHistory()
   printManual()

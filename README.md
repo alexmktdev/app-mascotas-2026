@@ -1,20 +1,22 @@
 # 🐾 App Mascotas 2026
 
-Plataforma web de adopción de mascotas construida con React + Supabase.
+Plataforma web de adopción de mascotas construida con Next.js (App Router) + Firebase + Cloudflare R2.
 
 ## Stack tecnológico
 
-- **Frontend:** React 19, Vite 6, TypeScript, Tailwind CSS v4
-- **State Management:** Zustand (auth), TanStack Query v5 (server state)
-- **Formularios:** React Hook Form + Zod
-- **Backend:** Supabase (Auth, PostgreSQL, RLS, Edge Functions)
+- **Frontend/Backend:** Next.js 16 (App Router, Server Components, Server Actions), React 19, TypeScript, Tailwind CSS v4
+- **Formularios:** React Hook Form + Zod (validación duplicada también server-side como guardián real)
+- **Autenticación:** Firebase Auth, sesión vía cookie httpOnly (Firebase session cookies) verificada con Firebase Admin SDK
+- **Base de datos:** Firestore, accedido exclusivamente desde el servidor (Admin SDK)
+- **Almacenamiento de fotos:** Cloudflare R2 (S3-compatible)
 - **Componentes:** Lucide icons, Embla Carousel, react-hot-toast
 
 ## Requisitos previos
 
-- Node.js 18+
-- npm 9+
-- Un proyecto en [Supabase](https://supabase.com) (plan free)
+- Node.js 20+
+- npm 10+
+- Un proyecto de [Firebase](https://console.firebase.google.com) (Auth + Firestore)
+- Un bucket de [Cloudflare R2](https://developers.cloudflare.com/r2/)
 
 ## Setup
 
@@ -26,13 +28,20 @@ cd App-Mascotas-2026
 npm install
 ```
 
-### 2. Configurar Supabase
+### 2. Configurar Firebase
 
-1. Crea un proyecto en [supabase.com](https://supabase.com)
-2. Ve a **SQL Editor** y ejecuta todo el contenido de `migrations/001_initial.sql`
-3. Copia tus credenciales de **Settings → API → API Keys**
+1. Crea un proyecto en [Firebase Console](https://console.firebase.google.com)
+2. Habilita **Authentication** (Email/Password) y **Firestore**
+3. En **Project Settings → General**, copia la config web (apiKey, authDomain, projectId, appId)
+4. En **Project Settings → Service Accounts**, genera una nueva clave privada (Admin SDK)
 
-### 3. Variables de entorno
+### 3. Configurar Cloudflare R2
+
+1. Crea un bucket R2 en el dashboard de Cloudflare
+2. Genera un API Token con permisos de lectura/escritura sobre el bucket (Account ID, Access Key ID, Secret Access Key)
+3. Habilita acceso público (dominio `r2.dev` o un dominio custom) para servir las fotos
+
+### 4. Variables de entorno
 
 Copia `.env.example` a `.env.local` y completa:
 
@@ -40,73 +49,72 @@ Copia `.env.example` a `.env.local` y completa:
 cp .env.example .env.local
 ```
 
-Edita `.env.local`:
-```
-VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
-VITE_SUPABASE_ANON_KEY=tu-publishable-key
-```
+Edita `.env.local` con tus credenciales de Firebase (cliente y Admin SDK) y de R2. `FIREBASE_PRIVATE_KEY` debe incluir los `\n` literales (entre comillas) o el salto de línea real.
 
-### 4. Crear primer usuario admin
+### 5. Crear primer usuario admin
 
 Dado que el sistema solo permite crear usuarios a admins, el primer admin debe crearse directamente:
 
-1. Ve a tu proyecto Supabase → **Authentication → Users**
-2. Click **Add User** → ingresa email y contraseña
-3. Ve a **Table Editor → profiles**
-4. Edita el registro del usuario recién creado: cambia `role` a `admin`
+1. Ve a tu proyecto Firebase → **Authentication → Users** → **Add user** (email y contraseña)
+2. Ve a **Firestore Database → profiles** y crea un documento con id = UID del usuario, con campos `first_name`, `last_name`, `email`, `role: "admin"`, `is_active: true`, `created_at`
 
 Ahora puedes loguearte y crear más usuarios desde el panel.
 
-### 5. Ejecutar en desarrollo
+### 6. Ejecutar en desarrollo
 
 ```bash
 npm run dev
 ```
 
-La app estará disponible en `http://localhost:5173`
+La app estará disponible en `http://localhost:3000`
 
 ## Estructura del proyecto
 
 ```
 src/
-├── api/              # Funciones que llaman a Supabase
+├── app/
+│   ├── (public)/     # Home y rutas públicas
+│   ├── admin/         # Panel de administración (protegido por middleware)
+│   ├── adopt/[petId]/ # Formulario de solicitud de adopción
+│   ├── pets/[id]/     # Ficha pública de mascota
+│   ├── login/, reset-password/, unauthorized/
+│   └── api/           # Route Handlers (sesión, fotos)
+├── server/            # Lógica server-only: auth-context, sesión, datos (pets, adoptions, users), storage R2, auditoría, sanitización
 ├── components/
-│   ├── ui/           # Componentes atómicos (Button, Badge, DataTable...)
-│   ├── layout/       # Header, Sidebar, Layouts
-│   └── pets/         # PetCard, PetSlider, PetFilters, PetForm
-├── hooks/            # Custom hooks con TanStack Query
-├── pages/
-│   ├── public/       # Home, PetDetail, AdoptionForm, Login
-│   └── admin/        # Dashboard, PetsList, InProcess, Adopted, Users
-├── lib/              # Supabase client, QueryClient, validaciones Zod
-├── store/            # Zustand (authStore)
-├── types/            # TypeScript types (derivados de Supabase)
-├── utils/            # Helpers puros
-├── constants/        # Constantes centralizadas
-└── router/           # Rutas y ProtectedRoute
+│   ├── ui/            # Componentes atómicos (Button, Badge, DataTable...)
+│   └── next/          # Componentes de la app Next (forms, tablas admin, etc.)
+├── lib/               # Firebase Admin SDK, Firebase client (solo Auth), R2 client, validaciones Zod
+├── types/             # TypeScript types (Firestore)
+├── utils/             # Helpers puros
+└── constants/         # Constantes centralizadas
 ```
 
-## Edge Function: crear usuario
+Toda validación, autorización y lógica de negocio vive en `src/server/*` y se invoca desde Server Actions o Route Handlers — el cliente nunca decide nada de seguridad.
 
-La Edge Function `create-user` se encuentra en `supabase/functions/create-user/`.
+## Seguridad
 
-Para desplegar:
+- `firestore.rules`: deny-all total (el Admin SDK bypassa las reglas; el cliente web no usa `firebase/firestore`)
+- `middleware.ts`: protege `/admin/*` verificando la cookie de sesión y el rol del usuario
+- `npm run test:security`: ejecuta las pruebas de reglas de Firestore contra el emulador + chequeos estáticos
+- `npm run test:security:extended`: auditoría estática adicional (headers, helpers de autorización, etc.)
+
+## Tests
+
 ```bash
-npx supabase functions deploy create-user
+npm run test        # Vitest (unit + componentes)
+npm run test:e2e     # Playwright
+npm run build        # build de producción (también valida tipos)
 ```
 
 ## Deploy
 
 ### Vercel
+
 ```bash
 npm run build
-# Subir carpeta dist/ o conectar con GitHub
 ```
 
-### Netlify
-- Build command: `npm run build`
-- Publish directory: `dist`
-- Agregar variables de entorno en el dashboard
+Conecta el repositorio con Vercel (detecta Next.js automáticamente) y configura las variables de entorno de `.env.example` en el dashboard del proyecto.
 
 ## Licencia
 

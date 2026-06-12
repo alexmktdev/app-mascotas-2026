@@ -1,5 +1,5 @@
 /**
- * Config Vitest solo para pruebas de seguridad (Firestore/Storage + estáticas).
+ * Config Vitest solo para pruebas de seguridad (Firestore + estáticas).
  * Ejecutar con: npm run test:security
  */
 import path from 'path'

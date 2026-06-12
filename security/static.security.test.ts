@@ -14,33 +14,21 @@ function read(p: string): string {
 }
 
 describe('Política en archivos de reglas (estático)', () => {
-  it('firestore.rules: mascotas sin escritura desde cliente', () => {
+  it('firestore.rules: deny-all (acceso solo vía Admin SDK)', () => {
     const rules = read('firestore.rules')
-    expect(rules).toMatch(/match\s+\/pets\/\{petId\}/)
-    expect(rules).toMatch(/allow\s+write:\s*if\s+false/)
-  })
-
-  it('firestore.rules: perfiles sin escritura desde cliente', () => {
-    const rules = read('firestore.rules')
-    expect(rules).toMatch(/profiles\/\{userId\}/)
-    expect(rules).toMatch(/allow\s+write:\s*if\s+false/)
-  })
-
-  it('firestore.rules: adoption_requests sin escritura desde cliente', () => {
-    const rules = read('firestore.rules')
-    expect(rules).toMatch(/adoption_requests/)
-    expect(rules).toMatch(/allow\s+write:\s*if\s+false/)
-  })
-
-  it('storage.rules: pet-photos sin escritura desde SDK web', () => {
-    const rules = read('storage.rules')
-    expect(rules).toMatch(/pet-photos/)
-    expect(rules).toMatch(/allow\s+write:\s*if\s+false/)
+    expect(rules).toMatch(/match\s+\/\{document=\*\*\}/)
+    expect(rules).toMatch(/allow\s+read,\s*write:\s*if\s+false/)
   })
 
   it('Cliente Firebase: sin API key hardcodeada en src', () => {
-    const firebaseTs = read('src/lib/firebase.ts')
-    expect(firebaseTs).toMatch(/import\.meta\.env\.VITE_FIREBASE/)
-    expect(firebaseTs).not.toMatch(/apiKey:\s*['\"]AIza/)
+    const firebaseTs = read('src/lib/firebase-client.ts')
+    expect(firebaseTs).toMatch(/process\.env\.NEXT_PUBLIC_FIREBASE/)
+    expect(firebaseTs).not.toMatch(/apiKey:\s*['"]AIza/)
+  })
+
+  it('Cliente Firebase web no importa firestore/storage', () => {
+    const firebaseTs = read('src/lib/firebase-client.ts')
+    expect(firebaseTs).not.toMatch(/firebase\/firestore/)
+    expect(firebaseTs).not.toMatch(/firebase\/storage/)
   })
 })

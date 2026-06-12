@@ -156,11 +156,9 @@ export const ADOPTION_STATUS_COLORS: Record<string, string> = {
 }
 
 // ──────────────────────────────────────────────
-// Fotos de mascotas (Supabase Storage, bucket pet-photos)
+// Fotos de mascotas (Cloudflare R2)
 // ──────────────────────────────────────────────
-export const PET_PHOTOS_BUCKET = 'pet-photos'
-export const PET_PHOTO_MAX_COUNT = 2
-/** Tamaño máximo por imagen (debe coincidir con file_size_limit del bucket, migración 004). 1,2 MiB. */
+/** Tamaño máximo por imagen (debe coincidir con la validación server-side de R2). 1,2 MiB. */
 export const PET_PHOTO_MAX_BYTES = Math.floor(1.2 * 1024 * 1024)
 /** Etiqueta para toasts / UI (derivada de PET_PHOTO_MAX_BYTES). */
 export const PET_PHOTO_MAX_SIZE_LABEL_ES =
