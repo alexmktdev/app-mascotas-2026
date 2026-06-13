@@ -18,7 +18,7 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-10 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-extrabold text-primary-600 sm:text-4xl">Sistema de Gestión de Adopción de Mascotas</h1>
+        <h1 className="text-2xl font-extrabold text-primary-600 sm:text-3xl">Sistema de Gestión de Adopción de Mascotas</h1>
         <p className="mt-2 text-base text-surface-500">Resumen general del sistema de adopciones</p>
       </div>
 
