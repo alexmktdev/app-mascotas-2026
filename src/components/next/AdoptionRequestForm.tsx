@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -19,7 +18,6 @@ interface AdoptionRequestFormProps {
 }
 
 export function AdoptionRequestForm({ petId, petName }: AdoptionRequestFormProps) {
-  const router = useRouter()
   const [formStatus, setFormStatus] = useState<FormStatus>('idle')
   const [isOnCooldown, setIsOnCooldown] = useState(false)
   const formStartTime = useRef(Date.now())
@@ -73,7 +71,6 @@ export function AdoptionRequestForm({ petId, petName }: AdoptionRequestFormProps
 
     if (result.success) {
       setFormStatus('success')
-      router.refresh()
     } else {
       toast.error(result.error)
       setFormStatus('error')
