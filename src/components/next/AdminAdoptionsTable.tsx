@@ -59,6 +59,11 @@ export function AdminAdoptionsTable({ result }: AdminAdoptionsTableProps) {
         toast.error(res.error)
         return
       }
+      toast.success(
+        action === 'approve'
+          ? `Solicitud aprobada. ${request.pet_name ?? 'La mascota'} fue marcada como adoptada.`
+          : 'Solicitud rechazada.',
+      )
       router.refresh()
     } finally {
       setActionLoading(false)
@@ -241,6 +246,7 @@ export function AdminAdoptionsTable({ result }: AdminAdoptionsTableProps) {
               toast.error(res.error)
               return
             }
+            toast.success('Solicitud eliminada.')
             router.refresh()
           } finally {
             setDeleteLoading(false)
