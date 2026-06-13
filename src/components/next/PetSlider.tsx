@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
+import Link from 'next/link'
 import useEmblaCarousel from 'embla-carousel-react'
 import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react'
 import { PetPhotoImage } from '@/components/next/PetPhotoImage'
@@ -11,19 +12,19 @@ interface PetSliderProps {
   size?: 'card' | 'detail'
   /** Índice de la card en la lista (0-2 = eager, resto = lazy) */
   cardIndex?: number
+  /** Si se indica, las fotos enlazan a la ficha de la mascota (modo card). Las flechas quedan fuera del link. */
+  href?: string
 }
 
 const FRAME_CLASS = 'aspect-square w-full min-h-0 overflow-hidden bg-surface-100'
 
-export function PetSlider({ photoUrls, petName, size = 'card', cardIndex = 99 }: PetSliderProps) {
+export function PetSlider({ photoUrls, petName, size = 'card', cardIndex = 99, href }: PetSliderProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true })
 
-  const scrollPrev = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
+  const scrollPrev = useCallback(() => {
     emblaApi?.scrollPrev()
   }, [emblaApi])
-  const scrollNext = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
+  const scrollNext = useCallback(() => {
     emblaApi?.scrollNext()
   }, [emblaApi])
 
@@ -36,51 +37,73 @@ export function PetSlider({ photoUrls, petName, size = 'card', cardIndex = 99 }:
     : '(min-width: 1024px) 50vw, 100vw'
 
   if (!photoUrls || photoUrls.length === 0) {
-    return (
-      <div className={`flex items-center justify-center text-surface-400 ${FRAME_CLASS}`}>
-        <div className="text-center">
-          <ImageOff className="mx-auto mb-2 h-8 w-8" />
-          <p className="text-sm">Sin fotos</p>
-        </div>
+    const content = (
+      <div className="text-center">
+        <ImageOff className="mx-auto mb-2 h-8 w-8" />
+        <p className="text-sm">Sin fotos</p>
       </div>
     )
+    if (href) {
+      return (
+        <Link href={href} className={`flex items-center justify-center text-surface-400 ${FRAME_CLASS}`}>
+          {content}
+        </Link>
+      )
+    }
+    return <div className={`flex items-center justify-center text-surface-400 ${FRAME_CLASS}`}>{content}</div>
   }
 
   if (photoUrls.length === 1) {
-    return (
-      <div className={FRAME_CLASS}>
-        <PetPhotoImage
-          src={photoUrls[0]!}
-          alt={petName}
-          loading={cardIndex < 6 ? 'eager' : 'lazy'}
-          priority={cardIndex < 6}
-          className={imageWrapperClass}
-          imageClassName={imgClass}
-          sizes={sizes}
-        />
-      </div>
+    const image = (
+      <PetPhotoImage
+        src={photoUrls[0]!}
+        alt={petName}
+        loading={cardIndex < 6 ? 'eager' : 'lazy'}
+        priority={cardIndex < 6}
+        className={imageWrapperClass}
+        imageClassName={imgClass}
+        sizes={sizes}
+      />
     )
+    if (href) {
+      return (
+        <Link href={href} className={FRAME_CLASS}>
+          {image}
+        </Link>
+      )
+    }
+    return <div className={FRAME_CLASS}>{image}</div>
   }
+
+  const track = (
+    <div className="flex h-full min-h-0">
+      {photoUrls.map((url, idx) => (
+        <div key={`${idx}-${url}`} className="h-full min-h-0 min-w-0 flex-[0_0_100%]">
+          <PetPhotoImage
+            src={url}
+            alt={`${petName} - Foto ${idx + 1}`}
+            loading={cardIndex < 6 && idx === 0 ? 'eager' : 'lazy'}
+            priority={cardIndex < 6 && idx === 0}
+            className={imageWrapperClass}
+            imageClassName={imgClass}
+            sizes={sizes}
+          />
+        </div>
+      ))}
+    </div>
+  )
 
   return (
     <div className="group relative w-full">
-      <div ref={emblaRef} className={FRAME_CLASS}>
-        <div className="flex h-full min-h-0">
-          {photoUrls.map((url, idx) => (
-            <div key={`${idx}-${url}`} className="h-full min-h-0 min-w-0 flex-[0_0_100%]">
-              <PetPhotoImage
-                src={url}
-                alt={`${petName} - Foto ${idx + 1}`}
-                loading={cardIndex < 6 && idx === 0 ? 'eager' : 'lazy'}
-                priority={cardIndex < 6 && idx === 0}
-                className={imageWrapperClass}
-                imageClassName={imgClass}
-                sizes={sizes}
-              />
-            </div>
-          ))}
+      {href ? (
+        <Link href={href} ref={emblaRef} className={`block ${FRAME_CLASS}`}>
+          {track}
+        </Link>
+      ) : (
+        <div ref={emblaRef} className={FRAME_CLASS}>
+          {track}
         </div>
-      </div>
+      )}
 
       {/* Controles */}
       <button

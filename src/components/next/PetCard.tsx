@@ -28,9 +28,7 @@ export function PetCard({ pet, index }: PetCardProps) {
         >
           {PET_STATUS_LABELS[pet.status] ?? pet.status}
         </span>
-        <Link href={`/pets/${pet.id}`} className="block overflow-hidden cursor-pointer">
-          <PetSlider photoUrls={pet.photo_urls} petName={pet.name} size="card" cardIndex={index} />
-        </Link>
+        <PetSlider photoUrls={pet.photo_urls} petName={pet.name} size="card" cardIndex={index} href={`/pets/${pet.id}`} />
       </div>
 
       {/* Info */}
