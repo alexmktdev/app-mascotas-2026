@@ -57,7 +57,8 @@ export async function createAdoptionRequestAction(petId: string, formData: FormD
     revalidateTag('adoptions', 'max')
     revalidatePath(`/pets/${petId}`)
     revalidatePath('/')
-    revalidatePath('/admin/adoptions')
+    revalidatePath('/admin')
+    revalidatePath('/admin/in-process')
 
     return { success: true, id }
   } catch (error) {
@@ -88,7 +89,9 @@ export async function updateAdoptionRequestAction(
 
     revalidateTag('pets', 'max')
     revalidateTag('adoptions', 'max')
-    revalidatePath('/admin/adoptions')
+    revalidatePath('/admin')
+    revalidatePath('/admin/in-process')
+    revalidatePath('/admin/adopted')
     revalidatePath('/admin/pets')
     revalidatePath('/')
 
@@ -112,7 +115,9 @@ export async function deleteAdoptionRequestAction(requestId: string): Promise<Ad
 
     revalidateTag('pets', 'max')
     revalidateTag('adoptions', 'max')
-    revalidatePath('/admin/adoptions')
+    revalidatePath('/admin')
+    revalidatePath('/admin/in-process')
+    revalidatePath('/admin/adopted')
     revalidatePath('/admin/pets')
     revalidatePath('/')
 
