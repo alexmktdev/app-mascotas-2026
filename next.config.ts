@@ -28,6 +28,14 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  experimental: {
+    // Evita que el panel admin muestre datos obsoletos al navegar entre
+    // secciones poco después de una mutación (revalidatePath no invalida
+    // el Router Cache del cliente de páginas ya prefetcheadas).
+    staleTimes: {
+      dynamic: 0,
+    },
+  },
 }
 
 export default nextConfig
