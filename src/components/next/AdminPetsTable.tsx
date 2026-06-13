@@ -111,15 +111,17 @@ export function AdminPetsTable({ result, emptyTitle, emptyDescription }: AdminPe
       className: 'w-[13rem]',
       render: (pet) => (
         <div className="flex items-center gap-2 whitespace-nowrap">
-          <button
-            type="button"
-            onClick={() => router.push(`/admin/pets/${pet.id}/edit`)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-primary-500 to-primary-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-primary-600/25 transition hover:from-primary-600 hover:to-primary-700 hover:shadow-lg"
-            aria-label="Editar"
-          >
-            <Pencil className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden sm:inline">Editar</span>
-          </button>
+          {pet.status !== 'adopted' && (
+            <button
+              type="button"
+              onClick={() => router.push(`/admin/pets/${pet.id}/edit`)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-primary-500 to-primary-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-primary-600/25 transition hover:from-primary-600 hover:to-primary-700 hover:shadow-lg"
+              aria-label="Editar"
+            >
+              <Pencil className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Editar</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setDeleteTarget(pet)}
