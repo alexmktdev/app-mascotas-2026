@@ -23,21 +23,21 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Tarjetas de estadísticas */}
-      <div className="grid gap-6 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3">
         {statCards.map((card) => (
           <Link
             key={card.label}
             href={card.href}
-            className="block overflow-hidden rounded-2xl border border-surface-200 bg-white p-8 shadow-sm transition-all hover:border-primary-200 hover:shadow-md"
+            className="block overflow-hidden rounded-2xl border border-surface-200 bg-white p-6 shadow-sm transition-all hover:border-primary-200 hover:shadow-md"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-base font-medium text-surface-500">{card.label}</p>
-                <p className="mt-2 text-5xl font-extrabold text-surface-900">{card.value}</p>
-                <p className="mt-3 text-sm text-primary-600">Ver listado →</p>
+                <p className="text-sm font-medium text-surface-500">{card.label}</p>
+                <p className="mt-1 text-3xl font-extrabold text-surface-900">{card.value}</p>
+                <p className="mt-2 text-xs text-primary-600">Ver listado →</p>
               </div>
-              <div className={`flex h-16 w-16 items-center justify-center rounded-xl ${card.bg}`}>
-                <card.icon className={`h-8 w-8 ${card.text}`} />
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${card.bg}`}>
+                <card.icon className={`h-6 w-6 ${card.text}`} />
               </div>
             </div>
           </Link>
