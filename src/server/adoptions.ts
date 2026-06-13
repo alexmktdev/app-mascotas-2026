@@ -128,17 +128,6 @@ async function fetchAdoptionRequestDetailUncached(id: string): Promise<AdoptionR
   return adoptionFromData(snap.id, snap.data()!)
 }
 
-export const fetchRecentAdoptionRequests = unstable_cache(
-  fetchRecentAdoptionRequestsUncached,
-  ['fetch-recent-adoption-requests'],
-  { revalidate: 30, tags: ['adoptions'] },
-)
-
-async function fetchRecentAdoptionRequestsUncached(limitCount: number = 5): Promise<AdminAdoptionRow[]> {
-  const snapshot = await adoptionsCollection().orderBy('created_at', 'desc').limit(limitCount).get()
-  return snapshot.docs.map((d) => adoptionFromData(d.id, d.data()))
-}
-
 // ─────────────────────────────────────────────────────────────────────────
 // ESCRITURA — port 1:1 de functions/src/index.ts (createAdoptionRequest,
 // updateAdoptionRequest, deleteAdoptionRequest), incluyendo la sincronización

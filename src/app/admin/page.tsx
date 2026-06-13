@@ -1,15 +1,12 @@
 import Link from 'next/link'
-import { PawPrint, Hourglass, Heart, Clock } from 'lucide-react'
+import { PawPrint, Hourglass, Heart } from 'lucide-react'
 import { fetchAllPetStats } from '@/server/pets'
-import { fetchActionableAdoptionRequestsCount, fetchRecentAdoptionRequests } from '@/server/adoptions'
-import { ADOPTION_STATUS_LABELS, ADOPTION_STATUS_COLORS } from '@/constants'
-import { formatRelativeDate } from '@/utils'
+import { fetchActionableAdoptionRequestsCount } from '@/server/adoptions'
 
 export default async function AdminDashboardPage() {
-  const [stats, actionableAdoptions, recentRequests] = await Promise.all([
+  const [stats, actionableAdoptions] = await Promise.all([
     fetchAllPetStats(),
     fetchActionableAdoptionRequestsCount(),
-    fetchRecentAdoptionRequests(),
   ])
 
   const statCards = [
@@ -45,52 +42,6 @@ export default async function AdminDashboardPage() {
             </div>
           </Link>
         ))}
-      </div>
-
-      {/* Solicitudes recientes */}
-      <div className="rounded-2xl border border-surface-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-surface-100 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-surface-400" />
-            <h2 className="text-lg font-bold text-surface-800">Solicitudes recientes</h2>
-          </div>
-          <Link href="/admin/in-process" className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors">
-            Ver todas →
-          </Link>
-        </div>
-
-        {recentRequests.length === 0 ? (
-          <div className="p-8 text-center text-sm text-surface-400">
-            No hay solicitudes recientes
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-surface-100 bg-surface-50/50">
-                  <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-surface-500">Solicitante</th>
-                  <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-surface-500">Correo</th>
-                  <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-surface-500">Estado</th>
-                  <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-surface-500">Fecha</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-100">
-                {recentRequests.map((req) => (
-                  <tr key={req.id} className="transition-colors hover:bg-surface-50/80">
-                    <td className="px-6 py-3 font-medium text-surface-800">{req.full_name}</td>
-                    <td className="px-6 py-3 text-surface-600">{req.email}</td>
-                    <td className="px-6 py-3">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${ADOPTION_STATUS_COLORS[req.status]}`}>
-                        {ADOPTION_STATUS_LABELS[req.status]}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-surface-500">{formatRelativeDate(req.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
     </div>
   )

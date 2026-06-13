@@ -148,13 +148,6 @@ export const ADOPTION_STATUS_LABELS: Record<string, string> = {
   rejected: 'Rechazada',
 }
 
-export const ADOPTION_STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
-  reviewing: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  approved: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  rejected: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
-}
-
 // ──────────────────────────────────────────────
 // Fotos de mascotas (Cloudflare R2)
 // ──────────────────────────────────────────────
